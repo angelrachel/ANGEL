@@ -8,3 +8,4 @@ Initial setup phase.
 - Private repository
 - Pre-commit hooks
 - CI/CD security scanning
+# trigger
