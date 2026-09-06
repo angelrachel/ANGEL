@@ -1,0 +1,10 @@
+version: '3.8'
+services:
+  angel:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app
+    volumes:
+      - ./src:/app/src
