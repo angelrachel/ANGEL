@@ -29,6 +29,8 @@ def test_scope_evidence_report_storage(tmp_path: Path) -> None:
     scope = store.create_scope("engagement", ["example.test"], ["/api/"])
     evidence = store.add_evidence(scope.id, "request", "tester", {"status": 200}, "a" * 64)
     report = store.add_report(scope.id, "Report", {"findings": []})
+    assert store.list_evidence(scope.id, evidence_type="request", actor="tester")[0] == evidence
+    assert store.get_report(report.id) == report
     assert store.get_scope(scope.id) == scope
     assert evidence.scope_id == scope.id
     assert report.scope_id == scope.id

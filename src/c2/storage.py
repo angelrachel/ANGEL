@@ -346,5 +346,42 @@ class Store:
         self.audit("report.created", "operator", str(report_id), {"scope_id": scope_id, "title": title})
         return ReportRecord(report_id, scope_id, title, payload, now)
 
+    def list_evidence(
+        self, scope_id: int, *, evidence_type: str | None = None, actor: str | None = None, limit: int = 100
+    ) -> list[EvidenceRecordRow]:
+        if not 1 <= limit <= 500:
+            raise ValueError("evidence limit must be between 1 and 500")
+        query = "SELECT * FROM evidence WHERE scope_id = ?"
+        parameters: list[Any] = [scope_id]
+        if evidence_type:
+            query += " AND evidence_type = ?"
+            parameters.append(evidence_type)
+        if actor:
+            query += " AND actor = ?"
+            parameters.append(actor)
+        query += " ORDER BY id DESC LIMIT ?"
+        parameters.append(limit)
+        with self._connect() as db:
+            rows = db.execute(query, parameters).fetchall()
+        return [
+            EvidenceRecordRow(
+                row["id"],
+                row["scope_id"],
+                row["evidence_type"],
+                row["actor"],
+                json.loads(row["payload"]),
+                row["record_hash"],
+                row["created_at"],
+            )
+            for row in rows
+        ]
+
+    def get_report(self, report_id: int) -> ReportRecord | None:
+        with self._connect() as db:
+            row = db.execute("SELECT * FROM reports WHERE id = ?", (report_id,)).fetchone()
+        if row is None:
+            return None
+        return ReportRecord(row["id"], row["scope_id"], row["title"], json.loads(row["payload"]), row["created_at"])
+
 
 __all__ = ["Agent", "Task", "Store"]
