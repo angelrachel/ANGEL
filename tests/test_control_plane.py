@@ -9,7 +9,7 @@ from urllib.request import Request, urlopen
 import pytest
 
 from src.auth import issue_token
-from src.c2.crypto import CryptoError, KeyPair, ReplayGuard, SessionCipher, derive_session_key
+from src.c2.crypto import CryptoError, KeyPair, KeyRegistry, ReplayGuard, SessionCipher, derive_session_key
 from src.c2.implant_windows import execute_allowlisted_task
 from src.c2.policy import validate_task
 from src.c2.server import build_server
@@ -36,6 +36,17 @@ def test_replay_and_tampering_are_rejected() -> None:
     envelope["data"] = envelope["data"][:-2] + "AA"
     with pytest.raises(CryptoError):
         cipher.decrypt(envelope)
+
+
+def test_key_registry_rotation_and_revocation() -> None:
+    registry = KeyRegistry()
+    registry.register("k1", b"x" * 64)
+    assert registry.get("k1") == b"x" * 64
+    registry.revoke("k1")
+    with pytest.raises(CryptoError, match="revoked"):
+        registry.get("k1")
+    with pytest.raises(CryptoError, match="revoked"):
+        registry.register("k1", b"y" * 64)
 
 
 def test_store_lifecycle(tmp_path: Path) -> None:

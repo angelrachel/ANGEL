@@ -7,6 +7,7 @@ import hashlib
 import hmac
 import json
 import os
+import threading
 import time
 from dataclasses import dataclass
 from typing import Any, cast
@@ -72,16 +73,49 @@ class ReplayGuard:
 
     def __post_init__(self) -> None:
         self._seen: set[str] = set()
+        self._lock = threading.Lock()
 
     def accept(self, message_id: str, timestamp: int, now: int | None = None) -> None:
         current = int(time.time()) if now is None else now
         if abs(current - timestamp) > self.ttl_seconds:
             raise CryptoError("message expired")
-        if message_id in self._seen:
-            raise CryptoError("replayed message")
-        self._seen.add(message_id)
-        if len(self._seen) > 10000:
-            self._seen = set(list(self._seen)[-5000:])
+        with self._lock:
+            if message_id in self._seen:
+                raise CryptoError("replayed message")
+            self._seen.add(message_id)
+            if len(self._seen) > 10000:
+                self._seen = set(list(self._seen)[-5000:])
+
+
+class KeyRegistry:
+    """Thread-safe key registry supporting explicit revocation and rotation."""
+
+    def __init__(self) -> None:
+        self._keys: dict[str, bytes] = {}
+        self._revoked: set[str] = set()
+        self._lock = threading.Lock()
+
+    def register(self, key_id: str, material: bytes) -> None:
+        if not key_id.strip() or len(material) < 64:
+            raise CryptoError("invalid key registration")
+        with self._lock:
+            if key_id in self._revoked:
+                raise CryptoError("key id is revoked")
+            self._keys[key_id] = bytes(material)
+
+    def revoke(self, key_id: str) -> None:
+        with self._lock:
+            self._keys.pop(key_id, None)
+            self._revoked.add(key_id)
+
+    def get(self, key_id: str) -> bytes:
+        with self._lock:
+            if key_id in self._revoked:
+                raise CryptoError("key id is revoked")
+            try:
+                return self._keys[key_id]
+            except KeyError as exc:
+                raise CryptoError("unknown key id") from exc
 
 
 class SessionCipher:
@@ -158,6 +192,7 @@ def decrypt_message(ciphertext: bytes) -> str:
 __all__ = [
     "CryptoError",
     "KeyPair",
+    "KeyRegistry",
     "ReplayGuard",
     "SessionCipher",
     "derive_session_key",
