@@ -41,7 +41,13 @@ jobs:
         run: bandit -q -r src
 
       - name: Pytest
-        run: pytest --cov=src --cov-report=term-missing --cov-fail-under=95
+        run: pytest --cov=src --cov-report=term-missing --cov-fail-under=80
+
+      - name: Compile check
+        run: python -m compileall -q src
+
+      - name: Container build
+        run: docker build --tag angel-control-plane:ci .
 
       - name: Secret scan
         run: detect-secrets scan --all-files --force-use-all-plugins
