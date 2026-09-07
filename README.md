@@ -30,13 +30,17 @@ Use only with written authorization and a defined engagement scope. Prefer a lab
 | Scope and rules of engagement | `src/scope.py`, `src/engagement.py` | Implemented, fail-closed |
 | Auditable assessment planning | `src/assessment.py` | Passive/simulation checks only |
 | Passive reconnaissance and inventory | `src/osint`, `src/api_intel.py`, `src/graphql_intel.py` | Implemented, non-destructive |
+| Passive observation findings | `src/passive_findings.py` | Implemented, conservative informational severity |
 | Evidence and chain of custody | `src/evidence` | Implemented with redaction and hash chain |
+| Evidence export verification | `src/evidence/manifest.py` | Implemented with deterministic manifest hash |
 | Reporting | `src/reporting.py`, `src/report/export.py` | Implemented in Markdown and JSON |
 | Approval, replay, cancellation, and bounded workflows | `src/orchestrator`, `src/cancellation.py` | Implemented |
 | Deployment separation and hardening | `deploy/`, `Dockerfile`, `docker-compose.yml` | Lab-ready baseline |
 | Implant execution, credential theft, persistence, evasion, lateral movement, rootkits, destructive impact | Intentionally absent | Owner-only / not implemented |
 
 The final row is deliberate. These capabilities are not required to validate the defensive control-plane foundation and would create unacceptable risk without a separately reviewed lab, authorization package, and safety design.
+
+Operational procedures are documented in [`docs/OPERATIONS.md`](docs/OPERATIONS.md).
 
 ## Development
 
