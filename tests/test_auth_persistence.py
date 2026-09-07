@@ -25,6 +25,7 @@ def test_rbac_token_and_expiry() -> None:
 
 def test_scope_evidence_report_storage(tmp_path: Path) -> None:
     store = Store(tmp_path / "records.db")
+    assert store.schema_version() == store.SCHEMA_VERSION
     scope = store.create_scope("engagement", ["example.test"], ["/api/"])
     evidence = store.add_evidence(scope.id, "request", "tester", {"status": 200}, "a" * 64)
     report = store.add_report(scope.id, "Report", {"findings": []})
@@ -36,6 +37,16 @@ def test_scope_evidence_report_storage(tmp_path: Path) -> None:
         store.add_evidence(scope.id, "response", "tester", {}, "invalid")
     with pytest.raises(ValueError, match="paths"):
         store.create_scope("bad", ["example.test"], ["api"])
+
+
+def test_store_rejects_newer_schema(tmp_path: Path) -> None:
+    import sqlite3
+
+    database = tmp_path / "future.db"
+    with sqlite3.connect(database) as connection:
+        connection.execute("PRAGMA user_version = 999")
+    with pytest.raises(RuntimeError, match="newer"):
+        Store(database)
 
 
 def test_rbac_api_endpoints(tmp_path: Path) -> None:

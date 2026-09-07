@@ -37,6 +37,8 @@ class Task:
 
 
 class Store:
+    SCHEMA_VERSION = 1
+
     def __init__(self, path: str | Path = "c2.db") -> None:
         self.path = str(path)
         self._initialize()
@@ -49,6 +51,9 @@ class Store:
 
     def _initialize(self) -> None:
         with self._connect() as db:
+            current_version = int(db.execute("PRAGMA user_version").fetchone()[0])
+            if current_version > self.SCHEMA_VERSION:
+                raise RuntimeError("database schema is newer than this application")
             db.executescript(
                 """
                 CREATE TABLE IF NOT EXISTS agents (
@@ -91,6 +96,12 @@ class Store:
                 CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_events(created_at);
                 """
             )
+            if current_version < self.SCHEMA_VERSION:
+                db.execute(f"PRAGMA user_version = {self.SCHEMA_VERSION}")
+
+    def schema_version(self) -> int:
+        with self._connect() as db:
+            return int(db.execute("PRAGMA user_version").fetchone()[0])
 
     def upsert_agent(self, agent_id: str, hostname: str, os_name: str, arch: str) -> Agent:
         now = int(time.time())
