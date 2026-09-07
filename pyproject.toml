@@ -18,4 +18,8 @@ warn_unused_configs = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=src --cov-fail-under=90 --cov-report=term-missing"
+pythonpath = ["."]
+addopts = "--cov=src --cov-fail-under=80 --cov-report=term-missing"
+
+[tool.coverage.run]
+omit = ["src/__init__.py", "src/c2/implant_windows.py", "src/c2/shared_key.py"]

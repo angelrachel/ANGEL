@@ -1,0 +1,89 @@
+from __future__ import annotations
+
+import json
+import threading
+from pathlib import Path
+from urllib.request import Request, urlopen
+
+import pytest
+
+from src.c2.crypto import CryptoError, KeyPair, ReplayGuard, SessionCipher, derive_session_key
+from src.c2.implant_windows import execute_allowlisted_task
+from src.c2.policy import validate_task
+from src.c2.server import build_server
+from src.c2.storage import Store
+
+
+def test_ecdh_and_authenticated_envelope() -> None:
+    first, second = KeyPair.generate(), KeyPair.generate()
+    left = derive_session_key(first.private_key, second.public_bytes)
+    right = derive_session_key(second.private_key, first.public_bytes)
+    assert left == right
+    cipher = SessionCipher(left)
+    envelope = cipher.encrypt({"type": "self_test"}, aad=b"agent-1")
+    assert cipher.decrypt(envelope, aad=b"agent-1", replay=ReplayGuard()) == {"type": "self_test"}
+
+
+def test_replay_and_tampering_are_rejected() -> None:
+    cipher = SessionCipher(b"x" * 64)
+    envelope = cipher.encrypt({"value": 1})
+    guard = ReplayGuard()
+    cipher.decrypt(envelope, replay=guard)
+    with pytest.raises(CryptoError):
+        cipher.decrypt(envelope, replay=guard)
+    envelope["data"] = envelope["data"][:-2] + "AA"
+    with pytest.raises(CryptoError):
+        cipher.decrypt(envelope)
+
+
+def test_store_lifecycle(tmp_path: Path) -> None:
+    store = Store(tmp_path / "test.db")
+    store.upsert_agent("a1", "host", "linux", "amd64")
+    task = store.enqueue_task("a1", "self_test", {})
+    claimed = store.claim_task("a1")
+    assert claimed is not None and claimed.id == task.id
+    store.record_result(task.id, "a1", {"status": "passed"})
+    assert store.get_agent("a1") is not None
+
+
+def test_disallowed_task_is_rejected(tmp_path: Path) -> None:
+    store = Store(tmp_path / "test.db")
+    store.upsert_agent("a1", "host", "linux", "amd64")
+    with pytest.raises(ValueError):
+        store.enqueue_task("a1", "exec_shell", {})
+
+
+def test_agent_executor_is_allowlisted() -> None:
+    assert execute_allowlisted_task({"type": "self_test"})["status"] == "passed"
+    with pytest.raises(ValueError):
+        execute_allowlisted_task({"type": "exec_shell"})
+
+
+def test_policy_rejects_invalid_payloads() -> None:
+    with pytest.raises(ValueError):
+        validate_task("self_test", "not-an-object")  # type: ignore[arg-type]
+    with pytest.raises(ValueError):
+        validate_task("self_test", {"data": "x" * 9000})
+
+
+def test_http_lifecycle(tmp_path: Path) -> None:
+    server = build_server(host="127.0.0.1", port=0, database=str(tmp_path / "api.db"))
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{server.server_port}"
+    headers = {"Content-Type": "application/json", "X-ANGEL-Key": "development-operator-key"}
+
+    def post(path: str, body: dict) -> dict:
+        request = Request(base + path, data=json.dumps(body).encode(), headers=headers, method="POST")
+        with urlopen(request, timeout=2) as response:
+            return json.loads(response.read())
+
+    registration = {"agent_id": "a1", "hostname": "h", "os": "linux", "arch": "amd64"}
+    assert post("/register", registration)["status"] == "registered"
+    queued = post("/task/queue", {"agent_id": "a1", "task_type": "self_test", "payload": {}})
+    task = post("/task/claim", {"agent_id": "a1"})["task"]
+    assert task["id"] == queued["task_id"]
+    result = post("/result", {"agent_id": "a1", "task_id": task["id"], "payload": {"status": "passed"}})
+    assert result["status"] == "recorded"
+    server.shutdown()
+    thread.join(timeout=2)
