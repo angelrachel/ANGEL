@@ -83,5 +83,25 @@ class EvidenceChain:
     def export(self) -> list[dict[str, Any]]:
         return [asdict(record) for record in self.records]
 
+    def export_json(self) -> str:
+        return json.dumps(self.export(), sort_keys=True)
+
+    @classmethod
+    def from_json(cls, value: str) -> EvidenceChain:
+        try:
+            raw = json.loads(value)
+            if not isinstance(raw, list):
+                raise ValueError("evidence chain must be an array")
+            chain = cls()
+            for item in raw:
+                if not isinstance(item, dict):
+                    raise ValueError("evidence record must be an object")
+                chain.records.append(EvidenceRecord(**item))
+            if not chain.verify():
+                raise ValueError("evidence chain integrity check failed")
+            return chain
+        except (TypeError, ValueError, KeyError, json.JSONDecodeError) as exc:
+            raise ValueError("malformed evidence chain") from exc
+
 
 __all__ = ["EvidenceChain", "EvidenceRecord", "redact"]

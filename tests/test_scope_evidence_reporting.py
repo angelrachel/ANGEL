@@ -42,6 +42,14 @@ def test_evidence_redacts_secrets_and_verifies_chain() -> None:
     assert chain.verify()
     chain.records[1] = chain.records[1].__class__(**{**chain.records[1].__dict__, "actor": "tampered"})
     assert not chain.verify()
+    restored = EvidenceChain.from_json(EvidenceChain.from_json(EvidenceChain().export_json()).export_json())
+    assert restored.verify()
+    valid = EvidenceChain()
+    valid.append("request", "tester", {"status": 200}, created_at=10)
+    serialized = json.loads(valid.export_json())
+    serialized[0]["actor"] = "tampered"
+    with pytest.raises(ValueError, match="malformed"):
+        EvidenceChain.from_json(json.dumps(serialized))
 
 
 def test_report_exports() -> None:
