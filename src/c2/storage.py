@@ -407,6 +407,16 @@ class Store:
             return None
         return {"subject": row["subject"], "roles": set(json.loads(row["roles"])), "revoked": bool(row["revoked"])}
 
+    def authorize_principal(self, subject: str, permission: str, role_permissions: dict[str, set[str]]) -> None:
+        principal = self.get_principal(subject)
+        if principal is None:
+            raise PermissionError("principal not found")
+        if principal["revoked"]:
+            raise PermissionError("principal is revoked")
+        granted = {item for role in principal["roles"] for item in role_permissions.get(role, set())}
+        if permission not in granted:
+            raise PermissionError("permission denied")
+
     def save_approval(self, request_id: str, actor: str, tool: str, approved: bool, reason: str) -> None:
         if not all(item.strip() for item in (request_id, actor, tool, reason)):
             raise ValueError("approval fields are required")

@@ -28,6 +28,9 @@ def test_scope_evidence_report_storage(tmp_path: Path) -> None:
     assert store.schema_version() == store.SCHEMA_VERSION
     store.save_principal("alice", {"operator"})
     assert store.get_principal("alice")["roles"] == {"operator"}
+    store.authorize_principal("alice", "audit.read", {"operator": {"audit.read"}})
+    with pytest.raises(PermissionError, match="denied"):
+        store.authorize_principal("alice", "admin.delete", {"operator": {"audit.read"}})
     store.save_approval("req-1", "alice", "inventory", True, "lab")
     assert store.get_approval("req-1")["approved"] is True
     scope = store.create_scope("engagement", ["example.test"], ["/api/"])
