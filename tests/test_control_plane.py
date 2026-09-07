@@ -8,6 +8,7 @@ from urllib.request import Request, urlopen
 
 import pytest
 
+from src.auth import issue_token
 from src.c2.crypto import CryptoError, KeyPair, ReplayGuard, SessionCipher, derive_session_key
 from src.c2.implant_windows import execute_allowlisted_task
 from src.c2.policy import validate_task
@@ -98,6 +99,10 @@ def test_http_lifecycle(tmp_path: Path) -> None:
         assert json.loads(response.read())["status"] == "ok"
     with urlopen(base + "/readyz", timeout=2) as response:
         assert json.loads(response.read())["status"] == "ready"
+    with urlopen(base + "/openapi.json", timeout=2) as response:
+        openapi = json.loads(response.read())
+        assert openapi["openapi"] == "3.0.3"
+        assert "/audit" in openapi["paths"]
 
     unauthenticated = Request(
         base + "/register",
@@ -121,5 +126,8 @@ def test_http_lifecycle(tmp_path: Path) -> None:
     assert result["status"] == "recorded"
     with urlopen(Request(base + "/tasks?agent_id=a1", headers=headers), timeout=2) as response:
         assert json.loads(response.read())["tasks"][0]["status"] == "completed"
+    token_headers = {"Authorization": f"Bearer {issue_token('auditor', 'auditor')}"}
+    with urlopen(Request(base + "/audit?limit=5", headers=token_headers), timeout=2) as response:
+        assert json.loads(response.read())["events"]
     server.shutdown()
     thread.join(timeout=2)

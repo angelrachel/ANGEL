@@ -17,6 +17,60 @@ from .policy import validate_task
 from .storage import Store
 
 
+def openapi_document() -> dict[str, Any]:
+    return {
+        "openapi": "3.0.3",
+        "info": {"title": "ANGEL Control Plane", "version": "1.0.0"},
+        "paths": {
+            "/healthz": {"get": {"responses": {"200": {"description": "Service is alive"}}}},
+            "/readyz": {"get": {"responses": {"200": {"description": "Service is ready"}}}},
+            "/openapi.json": {"get": {"responses": {"200": {"description": "OpenAPI document"}}}},
+            "/capabilities": {
+                "get": {"security": [{"operatorKey": []}], "responses": {"200": {"description": "Capabilities"}}}
+            },
+            "/agents": {
+                "get": {"security": [{"operatorKey": []}], "responses": {"200": {"description": "Registered agents"}}}
+            },
+            "/tasks": {
+                "get": {"security": [{"operatorKey": []}], "responses": {"200": {"description": "Tasks"}}}
+            },
+            "/audit": {
+                "get": {"security": [{"bearerAuth": []}], "responses": {"200": {"description": "Audit events"}}}
+            },
+            "/register": {
+                "post": {"security": [{"operatorKey": []}], "responses": {"200": {"description": "Registered"}}}
+            },
+            "/heartbeat": {
+                "post": {"security": [{"operatorKey": []}], "responses": {"200": {"description": "Acknowledged"}}}
+            },
+            "/task/queue": {
+                "post": {"security": [{"operatorKey": []}], "responses": {"202": {"description": "Queued"}}}
+            },
+            "/task/claim": {
+                "post": {"security": [{"operatorKey": []}], "responses": {"200": {"description": "Claimed task"}}}
+            },
+            "/result": {
+                "post": {"security": [{"operatorKey": []}], "responses": {"201": {"description": "Recorded"}}}
+            },
+            "/scope": {
+                "post": {"security": [{"bearerAuth": []}], "responses": {"201": {"description": "Scope created"}}}
+            },
+            "/evidence": {
+                "post": {"security": [{"bearerAuth": []}], "responses": {"201": {"description": "Evidence stored"}}}
+            },
+            "/report": {
+                "post": {"security": [{"bearerAuth": []}], "responses": {"201": {"description": "Report stored"}}}
+            },
+        },
+        "components": {
+            "securitySchemes": {
+                "operatorKey": {"type": "apiKey", "in": "header", "name": "X-ANGEL-Key"},
+                "bearerAuth": {"type": "http", "scheme": "bearer"},
+            }
+        },
+    }
+
+
 class C2Handler(BaseHTTPRequestHandler):
     store: ClassVar[Store]
     cipher: ClassVar[SessionCipher]
@@ -63,9 +117,19 @@ class C2Handler(BaseHTTPRequestHandler):
                 return
             self._json(200, {"status": "ready"})
             return
-        if not self._authorized():
-            self._json(401, {"error": "unauthorized"})
+        if parsed.path == "/openapi.json":
+            self._json(200, openapi_document())
             return
+        if not self._authorized():
+            if parsed.path != "/audit" or not self.headers.get("Authorization", "").startswith("Bearer "):
+                self._json(401, {"error": "unauthorized"})
+                return
+            try:
+                if not self._principal().can("read"):
+                    raise AuthError("read permission required")
+            except AuthError as exc:
+                self._json(401, {"error": str(exc)})
+                return
         if parsed.path == "/capabilities":
             self._json(200, {"service": "angel-c2", "protocol": 1})
             return
@@ -76,6 +140,16 @@ class C2Handler(BaseHTTPRequestHandler):
             agent_values = parse_qs(parsed.query).get("agent_id", [])
             agent_id = agent_values[0] if agent_values else None
             self._json(200, {"tasks": [task.__dict__ for task in self.store.list_tasks(agent_id)]})
+            return
+        if parsed.path == "/audit":
+            values = parse_qs(parsed.query).get("limit", ["100"])
+            try:
+                limit = int(values[0])
+                events = self.store.list_audit_events(limit)
+            except ValueError as exc:
+                self._json(400, {"error": str(exc)})
+                return
+            self._json(200, {"events": events})
             return
         self._json(404, {"error": "not found"})
 

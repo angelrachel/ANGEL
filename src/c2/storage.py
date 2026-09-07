@@ -214,6 +214,23 @@ class Store:
                 (event_type, actor, subject, json.dumps(details, sort_keys=True), int(time.time())),
             )
 
+    def list_audit_events(self, limit: int = 100) -> list[dict[str, Any]]:
+        if not 1 <= limit <= 500:
+            raise ValueError("audit limit must be between 1 and 500")
+        with self._connect() as db:
+            rows = db.execute("SELECT * FROM audit_events ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+        return [
+            {
+                "id": row["id"],
+                "event_type": row["event_type"],
+                "actor": row["actor"],
+                "subject": row["subject"],
+                "details": json.loads(row["details"]),
+                "created_at": row["created_at"],
+            }
+            for row in rows
+        ]
+
     def create_scope(self, name: str, hosts: list[str], paths: list[str], expires_at: int | None = None) -> ScopeRecord:
         if not name.strip() or not hosts or not paths:
             raise ValueError("scope name, hosts, and paths are required")
