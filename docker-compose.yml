@@ -1,10 +1,23 @@
-version: '3.8'
 services:
   angel:
     build: .
     ports:
       - "8000:8000"
     environment:
-      - PYTHONPATH=/app
+      ANGEL_ENV: ${ANGEL_ENV:-development}
+      ANGEL_HOST: 0.0.0.0
+      ANGEL_PORT: 8000
+      ANGEL_DATABASE: /data/c2.db
+      ANGEL_OPERATOR_KEY: ${ANGEL_OPERATOR_KEY:-development-operator-key}
+      ANGEL_SHARED_KEY: ${ANGEL_SHARED_KEY:-development-only-key}
+      ANGEL_AUTH_SECRET: ${ANGEL_AUTH_SECRET:-development-auth-secret}
     volumes:
-      - ./src:/app/src
+      - angel-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/healthz', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  angel-data:
