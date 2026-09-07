@@ -39,3 +39,25 @@ def prune_backups(directory: str | Path, keep: int = 5) -> list[Path]:
 
 
 __all__ = ["BackupError", "backup_database", "prune_backups"]
+
+
+class BackupManager:
+    """Create timestamped database snapshots and enforce retention."""
+
+    def __init__(self, source: str | Path, directory: str | Path, keep: int = 5) -> None:
+        if keep < 1:
+            raise ValueError("keep must be positive")
+        self.source = Path(source)
+        self.directory = Path(directory)
+        self.keep = keep
+
+    def snapshot(self, timestamp: int) -> Path:
+        if timestamp < 0:
+            raise ValueError("timestamp must be non-negative")
+        destination = self.directory / f"c2-{timestamp}.db"
+        backup = backup_database(self.source, destination)
+        prune_backups(self.directory, self.keep)
+        return backup
+
+
+__all__ = ["BackupError", "BackupManager", "backup_database", "prune_backups"]
