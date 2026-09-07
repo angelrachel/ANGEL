@@ -66,8 +66,17 @@ def execute_allowlisted_task(task: dict[str, Any]) -> dict[str, Any]:
         return {"status": "passed", "agent": "angel-agent"}
     if task_type == "get_capabilities":
         return {"tasks": sorted(ALLOWED_TASKS)}
+    if task_type == "get_config":
+        return {"agent_mode": "synthetic", "heartbeat_seconds": 30, "max_task_runtime_seconds": 60}
     if task_type == "collect_synthetic_inventory":
         return {"hostname": "synthetic-host", "os": "synthetic-os", "source": "test-fixture"}
+    if task_type == "submit_synthetic_result":
+        result = task.get("result")
+        if not isinstance(result, dict) or len(str(result)) > 4096:
+            raise ValueError("synthetic result must be a bounded object")
+        return {"status": "accepted", "fields": sorted(result)}
+    if task_type == "rotate_key":
+        return {"status": "rotation-requested", "key_id": str(task.get("key_id", "next"))}
     if task_type == "shutdown_agent":
         return {"status": "shutdown-requested"}
     return {"status": "accepted", "task": task_type}

@@ -97,6 +97,9 @@ def test_disallowed_task_is_rejected(tmp_path: Path) -> None:
 
 def test_agent_executor_is_allowlisted() -> None:
     assert execute_allowlisted_task({"type": "self_test"})["status"] == "passed"
+    assert execute_allowlisted_task({"type": "get_config"})["agent_mode"] == "synthetic"
+    assert execute_allowlisted_task({"type": "submit_synthetic_result", "result": {"ok": True}})["status"] == "accepted"
+    assert execute_allowlisted_task({"type": "rotate_key", "key_id": "k2"})["key_id"] == "k2"
     with pytest.raises(ValueError):
         execute_allowlisted_task({"type": "exec_shell"})
 
