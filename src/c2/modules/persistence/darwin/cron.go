@@ -1,20 +1,36 @@
-package darwin
+//go:build darwin
+
+package persistence
 
 import (
-"os"
+"os/exec"
+"strings"
 )
 
-type DarwinCronPersistence struct{}
-
-func NewDarwinCronPersistence() *DarwinCronPersistence {
-return &DarwinCronPersistence{}
+func InstallCron(command string) bool {
+cmd := exec.Command("crontab", "-l")
+output, err := cmd.Output()
+if err != nil {
+cmd = exec.Command("crontab", "-")
+cmd.Stdin = strings.NewReader("* * * * * " + command)
+cmd.Run()
+return true
+}
+newCron := string(output) + "* * * * * " + command
+cmd = exec.Command("crontab", "-")
+cmd.Stdin = strings.NewReader(newCron)
+err = cmd.Run()
+if err != nil {
+return false
+}
+return true
 }
 
-func (c *DarwinCronPersistence) AddCron(command, schedule, user string) error {
-cronLine := schedule + " " + command + "\n"
-cronFile := "/etc/cron.d/angel"
-if user != "" {
-cronLine = schedule + " " + user + " " + command + "\n"
+func UninstallCron() bool {
+cmd := exec.Command("crontab", "-r")
+err := cmd.Run()
+if err != nil {
+return false
 }
-return os.WriteFile(cronFile, []byte(cronLine), 0644)
+return true
 }

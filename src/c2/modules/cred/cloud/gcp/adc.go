@@ -41,11 +41,3 @@ return "", err
 }
 return content, nil
 }
-
-func (a *ADC) DumpAll() (string, error) {
-content, err := a.ReadADC()
-if err != nil {
-return "", err
-}
-return content, nil
-}

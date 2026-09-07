@@ -1,0 +1,7 @@
+- hosts: lab
+  become: yes
+  tasks:
+    - name: Install basic tools
+      apt:
+        name: git
+        state: present

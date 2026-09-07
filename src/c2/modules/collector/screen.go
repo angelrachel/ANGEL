@@ -1,24 +1,32 @@
+//go:build windows
+
 package collector
 
 import (
-"os"
-"time"
+"os/exec"
 )
 
-type ScreenCollector struct{}
-
-func NewScreenCollector() *ScreenCollector {
-return &ScreenCollector{}
+func CaptureScreenshot(outputPath string) bool {
+cmd := exec.Command("cmd", "/c", "powershell -Command \"Add-Type -AssemblyName System.Windows.Forms,System.Drawing; $b = New-Object System.Drawing.Bitmap([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width, [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height); $g = [System.Drawing.Graphics]::FromImage($b); $g.CopyFromScreen(0,0,0,0,$b.Size); $b.Save('"+outputPath+"')\"")
+err := cmd.Run()
+if err != nil {
+return false
+}
+return true
 }
 
-func (s *ScreenCollector) Capture() (string, error) {
-// In real implementation, would use screenshot library
-filename := "screenshot_" + time.Now().Format("20060102_150405") + ".png"
-// Placeholder
-return filename, os.WriteFile(filename, []byte("screenshot_data"), 0644)
+func CaptureScreenshotLoop(outputPath string, seconds int) bool {
+for i := 0; i < seconds; i++ {
+CaptureScreenshot(outputPath)
+}
+return true
 }
 
-func (s *ScreenCollector) Record(duration int) (string, error) {
-filename := "recording_" + time.Now().Format("20060102_150405") + ".mp4"
-return filename, os.WriteFile(filename, []byte("recording_data"), 0644)
+func CaptureActiveWindow(outputPath string) bool {
+cmd := exec.Command("cmd", "/c", "powershell -Command \"Add-Type -AssemblyName System.Windows.Forms,System.Drawing; $b = New-Object System.Drawing.Bitmap([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width, [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height); $g = [System.Drawing.Graphics]::FromImage($b); $g.CopyFromScreen(0,0,0,0,$b.Size); $b.Save('"+outputPath+"')\"")
+err := cmd.Run()
+if err != nil {
+return false
+}
+return true
 }

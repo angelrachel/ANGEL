@@ -1,27 +1,54 @@
-package linux
+//go:build linux
+
+package credential
 
 import (
 "os"
+"strings"
+"syscall"
 )
 
-type Shadow struct{}
-
-func NewShadow() *Shadow {
-return &Shadow{}
+type ShadowDump struct {
+Path string
 }
 
-func (s *Shadow) ExtractShadow() (string, error) {
-data, err := os.ReadFile("/etc/shadow")
+func NewShadowDump(path string) *ShadowDump {
+return &ShadowDump{Path: path}
+}
+
+func (s *ShadowDump) ReadShadow() ([]byte, error) {
+file, err := os.Open(s.Path)
 if err != nil {
-return "", err
+return nil, err
 }
-return string(data), nil
+defer file.Close()
+buf := make([]byte, 4096)
+n, err := file.Read(buf)
+if err != nil {
+return nil, err
+}
+return buf[:n], nil
 }
 
-func (s *Shadow) ExtractPasswd() (string, error) {
-data, err := os.ReadFile("/etc/passwd")
-if err != nil {
-return "", err
+func (s *ShadowDump) IsReadable() bool {
+var stat syscall.Stat_t
+if err := syscall.Stat(s.Path, &stat); err != nil {
+return false
 }
-return string(data), nil
+return stat.Mode&syscall.S_IRUSR != 0
+}
+
+func (s *ShadowDump) DumpAllHashes() ([]string, error) {
+content, err := s.ReadShadow()
+if err != nil {
+return nil, err
+}
+var hashes []string
+lines := strings.Split(string(content), "\n")
+for _, line := range lines {
+if strings.Contains(line, ":") {
+hashes = append(hashes, line)
+}
+}
+return hashes, nil
 }

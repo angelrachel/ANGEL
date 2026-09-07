@@ -1,35 +1,30 @@
-package darwin
+//go:build darwin
+
+package persistence
 
 import (
-"os"
+"os/exec"
 )
 
-type LaunchAgentsPersistence struct{}
-
-func NewLaunchAgentsPersistence() *LaunchAgentsPersistence {
-return &LaunchAgentsPersistence{}
+func InstallLaunchAgent(plistPath string) bool {
+cmd := exec.Command("cp", plistPath, "/Library/LaunchAgents/")
+err := cmd.Run()
+if err != nil {
+return false
+}
+cmd = exec.Command("launchctl", "load", "/Library/LaunchAgents/"+plistPath)
+err = cmd.Run()
+if err != nil {
+return false
+}
+return true
 }
 
-func (l *LaunchAgentsPersistence) CreateAgent(name, execPath string) error {
-plistContent := `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>` + name + `</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>` + execPath + `</string>
-    </array>
-    <key>RunAtLoad</key>
-    <true/>
-    <key>KeepAlive</key>
-    <true/>
-</dict>
-</plist>`
-return os.WriteFile("/Library/LaunchAgents/"+name+".plist", []byte(plistContent), 0644)
+func RemoveLaunchAgent(plistPath string) bool {
+cmd := exec.Command("launchctl", "unload", "/Library/LaunchAgents/"+plistPath)
+err := cmd.Run()
+if err != nil {
+return false
 }
-
-func (l *LaunchAgentsPersistence) LoadAgent(name string) error {
-return os.Symlink("/Library/LaunchAgents/"+name+".plist", "/Library/LaunchAgents/"+name+".plist")
+return true
 }

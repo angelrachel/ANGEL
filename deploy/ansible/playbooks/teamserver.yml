@@ -1,0 +1,8 @@
+- hosts: teamserver
+  become: yes
+  tasks:
+    - name: Deploy ANGEL
+      copy:
+        src: /tmp/angel
+        dest: /opt/angel
+        mode: preserve

