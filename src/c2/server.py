@@ -244,7 +244,10 @@ class C2Handler(BaseHTTPRequestHandler):
                 self._json(201, {"id": record.id, "title": record.title})
                 return
             self._json(404, {"error": "not found"})
-        except (ValueError, json.JSONDecodeError, AuthError, KeyError) as exc:
+        except AuthError as exc:
+            error_status = 403 if "permission" in str(exc) else 401
+            self._json(error_status, {"error": str(exc)})
+        except (ValueError, json.JSONDecodeError, KeyError) as exc:
             self._json(400, {"error": str(exc)})
         except Exception:
             self._json(500, {"error": "internal error"})

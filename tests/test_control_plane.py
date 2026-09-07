@@ -63,6 +63,20 @@ def test_result_requires_assigned_task_owner(tmp_path: Path) -> None:
         store.record_result(task.id, "a1", {"status": "passed"})
 
 
+def test_storage_maintenance_marks_expired_and_stale(tmp_path: Path) -> None:
+    store = Store(tmp_path / "test.db")
+    store.upsert_agent("a1", "host", "linux", "amd64")
+    task = store.enqueue_task("a1", "self_test", {}, ttl=1)
+    assert store.expire_tasks(now=task.expires_at + 1) == 1
+    saved_task = store.get_task(task.id)
+    assert saved_task is not None and saved_task.status == "expired"
+    assert store.mark_stale_agents(stale_after=1, now=task.created_at + 2) == 1
+    saved_agent = store.get_agent("a1")
+    assert saved_agent is not None and saved_agent.status == "offline"
+    with pytest.raises(ValueError, match="positive"):
+        store.mark_stale_agents(stale_after=0)
+
+
 def test_disallowed_task_is_rejected(tmp_path: Path) -> None:
     store = Store(tmp_path / "test.db")
     store.upsert_agent("a1", "host", "linux", "amd64")

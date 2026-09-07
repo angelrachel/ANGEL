@@ -149,6 +149,26 @@ class Store:
             for row in rows
         ]
 
+    def expire_tasks(self, now: int | None = None) -> int:
+        current = int(time.time()) if now is None else now
+        with self._connect() as db:
+            cursor = db.execute(
+                "UPDATE tasks SET status='expired' WHERE status IN ('pending', 'assigned') AND expires_at < ?",
+                (current,),
+            )
+        return cursor.rowcount
+
+    def mark_stale_agents(self, stale_after: int = 300, now: int | None = None) -> int:
+        if stale_after < 1:
+            raise ValueError("stale threshold must be positive")
+        current = int(time.time()) if now is None else now
+        with self._connect() as db:
+            cursor = db.execute(
+                "UPDATE agents SET status='offline' WHERE status='online' AND last_seen < ?",
+                (current - stale_after,),
+            )
+        return cursor.rowcount
+
     def enqueue_task(self, agent_id: str, task_type: str, payload: dict[str, Any], ttl: int = 300) -> Task:
         validate_task(task_type, payload)
         now = int(time.time())
