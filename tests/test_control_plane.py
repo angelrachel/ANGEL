@@ -9,7 +9,16 @@ from urllib.request import Request, urlopen
 import pytest
 
 from src.auth import issue_token
-from src.c2.crypto import CryptoError, KeyPair, KeyRegistry, ReplayGuard, SessionCipher, derive_session_key
+from src.c2.crypto import (
+    CryptoError,
+    KeyPair,
+    KeyRegistry,
+    ReplayGuard,
+    SessionCipher,
+    derive_session_key,
+    sign_message,
+    verify_signature,
+)
 from src.c2.implant_windows import execute_allowlisted_task
 from src.c2.policy import validate_task
 from src.c2.server import build_server
@@ -47,6 +56,14 @@ def test_key_registry_rotation_and_revocation() -> None:
         registry.get("k1")
     with pytest.raises(CryptoError, match="revoked"):
         registry.register("k1", b"y" * 64)
+
+
+def test_signature_verification() -> None:
+    key = KeyPair.generate()
+    message = b"ANGEL test vector"
+    signature = sign_message(key.private_key, message)
+    assert verify_signature(key.private_key.public_key(), message, signature)
+    assert not verify_signature(key.private_key.public_key(), b"tampered", signature)
 
 
 def test_store_lifecycle(tmp_path: Path) -> None:

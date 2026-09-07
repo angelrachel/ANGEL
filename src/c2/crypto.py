@@ -12,6 +12,7 @@ import time
 from dataclasses import dataclass
 from typing import Any, cast
 
+from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -61,6 +62,18 @@ def derive_session_key(
         raise CryptoError("invalid peer public key") from exc
     shared = private_key.exchange(ec.ECDH(), peer)
     return HKDF(algorithm=hashes.SHA256(), length=64, salt=None, info=context).derive(shared)
+
+
+def sign_message(private_key: ec.EllipticCurvePrivateKey, message: bytes) -> bytes:
+    return private_key.sign(message, ec.ECDSA(hashes.SHA256()))
+
+
+def verify_signature(public_key: ec.EllipticCurvePublicKey, message: bytes, signature: bytes) -> bool:
+    try:
+        public_key.verify(signature, message, ec.ECDSA(hashes.SHA256()))
+    except InvalidSignature:
+        return False
+    return True
 
 
 def _canonical_bytes(value: dict[str, Any]) -> bytes:
@@ -196,6 +209,8 @@ __all__ = [
     "ReplayGuard",
     "SessionCipher",
     "derive_session_key",
+    "sign_message",
+    "verify_signature",
     "encrypt_message",
     "decrypt_message",
 ]
