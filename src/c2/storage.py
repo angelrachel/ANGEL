@@ -147,13 +147,22 @@ class Store:
         )
 
     def record_result(self, task_id: int, agent_id: str, payload: dict[str, Any]) -> None:
+        if not isinstance(payload, dict):
+            raise ValueError("result payload must be an object")
         now = int(time.time())
         with self._connect() as db:
+            task = db.execute("SELECT agent_id, status FROM tasks WHERE id = ?", (task_id,)).fetchone()
+            if task is None:
+                raise ValueError("task not found")
+            if task["agent_id"] != agent_id:
+                raise ValueError("agent is not assigned to task")
+            if task["status"] != "assigned":
+                raise ValueError("task is not awaiting a result")
             db.execute(
                 "INSERT INTO results(task_id, agent_id, payload, created_at) VALUES (?, ?, ?, ?)",
                 (task_id, agent_id, json.dumps(payload, sort_keys=True), now),
             )
-            db.execute("UPDATE tasks SET status='completed' WHERE id=? AND agent_id=?", (task_id, agent_id))
+            db.execute("UPDATE tasks SET status='completed' WHERE id=?", (task_id,))
         self.audit("task.completed", agent_id, str(task_id), {"keys": sorted(payload)})
 
     def audit(self, event_type: str, actor: str, subject: str, details: dict[str, Any]) -> None:

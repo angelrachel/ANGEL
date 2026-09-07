@@ -53,6 +53,14 @@ class C2Handler(BaseHTTPRequestHandler):
         if self.path == "/healthz":
             self._json(200, {"status": "ok"})
             return
+        if self.path == "/readyz":
+            try:
+                self.store.get_agent("")
+            except Exception:
+                self._json(503, {"status": "not_ready"})
+                return
+            self._json(200, {"status": "ready"})
+            return
         if not self._authorized():
             self._json(401, {"error": "unauthorized"})
             return
@@ -73,12 +81,13 @@ class C2Handler(BaseHTTPRequestHandler):
             return
         try:
             data = self._body()
-            if self.path == "/register":
+            if self.path in {"/register", "/heartbeat"}:
                 required = ("agent_id", "hostname", "os", "arch")
                 if any(not isinstance(data.get(key), str) or not data[key] for key in required):
                     raise ValueError("missing agent registration field")
                 agent = self.store.upsert_agent(data["agent_id"], data["hostname"], data["os"], data["arch"])
-                self._json(200, {"status": "registered", "agent_id": agent.id})
+                status = "registered" if self.path == "/register" else "heartbeat_ack"
+                self._json(200, {"status": status, "agent_id": agent.id, "last_seen": agent.last_seen})
                 return
             if self.path == "/task/queue":
                 agent_id = data.get("agent_id")

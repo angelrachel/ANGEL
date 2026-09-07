@@ -46,6 +46,21 @@ def test_store_lifecycle(tmp_path: Path) -> None:
     assert store.get_agent("a1") is not None
 
 
+def test_result_requires_assigned_task_owner(tmp_path: Path) -> None:
+    store = Store(tmp_path / "test.db")
+    store.upsert_agent("a1", "host", "linux", "amd64")
+    store.upsert_agent("a2", "other", "linux", "amd64")
+    task = store.enqueue_task("a1", "self_test", {})
+    with pytest.raises(ValueError, match="assigned"):
+        store.record_result(task.id, "a2", {"status": "passed"})
+    with pytest.raises(ValueError, match="awaiting"):
+        store.record_result(task.id, "a1", {"status": "passed"})
+    store.claim_task("a1")
+    store.record_result(task.id, "a1", {"status": "passed"})
+    with pytest.raises(ValueError, match="awaiting"):
+        store.record_result(task.id, "a1", {"status": "passed"})
+
+
 def test_disallowed_task_is_rejected(tmp_path: Path) -> None:
     store = Store(tmp_path / "test.db")
     store.upsert_agent("a1", "host", "linux", "amd64")
@@ -78,8 +93,14 @@ def test_http_lifecycle(tmp_path: Path) -> None:
         with urlopen(request, timeout=2) as response:
             return json.loads(response.read())
 
+    with urlopen(base + "/healthz", timeout=2) as response:
+        assert json.loads(response.read())["status"] == "ok"
+    with urlopen(base + "/readyz", timeout=2) as response:
+        assert json.loads(response.read())["status"] == "ready"
+
     registration = {"agent_id": "a1", "hostname": "h", "os": "linux", "arch": "amd64"}
     assert post("/register", registration)["status"] == "registered"
+    assert post("/heartbeat", registration)["status"] == "heartbeat_ack"
     queued = post("/task/queue", {"agent_id": "a1", "task_type": "self_test", "payload": {}})
     task = post("/task/claim", {"agent_id": "a1"})["task"]
     assert task["id"] == queued["task_id"]
