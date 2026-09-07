@@ -37,6 +37,7 @@ def test_scope_evidence_report_storage(tmp_path: Path) -> None:
         store.add_evidence(scope.id, "response", "tester", {}, "invalid")
     with pytest.raises(ValueError, match="paths"):
         store.create_scope("bad", ["example.test"], ["api"])
+    assert store.list_audit_events(event_type="scope.created", actor="operator")
 
 
 def test_store_rejects_newer_schema(tmp_path: Path) -> None:

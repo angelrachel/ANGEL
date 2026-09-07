@@ -247,11 +247,26 @@ class Store:
                 (event_type, actor, subject, json.dumps(details, sort_keys=True), int(time.time())),
             )
 
-    def list_audit_events(self, limit: int = 100) -> list[dict[str, Any]]:
+    def list_audit_events(
+        self, limit: int = 100, *, event_type: str | None = None, actor: str | None = None
+    ) -> list[dict[str, Any]]:
         if not 1 <= limit <= 500:
             raise ValueError("audit limit must be between 1 and 500")
+        parameters: tuple[Any, ...]
+        if event_type and actor:
+            query = "SELECT * FROM audit_events WHERE event_type = ? AND actor = ? ORDER BY id DESC LIMIT ?"
+            parameters = (event_type, actor, limit)
+        elif event_type:
+            query = "SELECT * FROM audit_events WHERE event_type = ? ORDER BY id DESC LIMIT ?"
+            parameters = (event_type, limit)
+        elif actor:
+            query = "SELECT * FROM audit_events WHERE actor = ? ORDER BY id DESC LIMIT ?"
+            parameters = (actor, limit)
+        else:
+            query = "SELECT * FROM audit_events ORDER BY id DESC LIMIT ?"
+            parameters = (limit,)
         with self._connect() as db:
-            rows = db.execute("SELECT * FROM audit_events ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+            rows = db.execute(query, parameters).fetchall()
         return [
             {
                 "id": row["id"],

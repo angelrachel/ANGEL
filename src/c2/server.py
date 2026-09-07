@@ -154,10 +154,15 @@ class C2Handler(BaseHTTPRequestHandler):
             self._json(200, {"tasks": [task.__dict__ for task in self.store.list_tasks(agent_id)]})
             return
         if parsed.path == "/audit":
-            values = parse_qs(parsed.query).get("limit", ["100"])
+            query = parse_qs(parsed.query)
+            values = query.get("limit", ["100"])
             try:
                 limit = int(values[0])
-                events = self.store.list_audit_events(limit)
+                events = self.store.list_audit_events(
+                    limit,
+                    event_type=query.get("event_type", [None])[0],
+                    actor=query.get("actor", [None])[0],
+                )
             except ValueError as exc:
                 self._json(400, {"error": str(exc)})
                 return
