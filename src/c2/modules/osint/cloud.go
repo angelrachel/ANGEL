@@ -2,7 +2,6 @@ package osint
 
 import (
 "encoding/xml"
-"fmt"
 "io"
 "net/http"
 "strings"

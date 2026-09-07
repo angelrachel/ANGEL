@@ -2,11 +2,7 @@ package osint
 
 import (
 "encoding/json"
-"fmt"
-"io"
 "net/http"
-"regexp"
-"strings"
 )
 
 type PersonOSINT struct{}
@@ -17,7 +13,6 @@ return &PersonOSINT{}
 
 func (p *PersonOSINT) HarvestEmails(domain string) ([]string, error) {
 // Simplified email harvesting
-url := "https://api.hunter.io/v2/domain-search?domain=" + domain
 // In real implementation, would use proper API key
 return []string{}, nil
 }

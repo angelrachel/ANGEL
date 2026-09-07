@@ -1,8 +1,6 @@
 package osint
 
 import (
-"encoding/json"
-"fmt"
 "net"
 "os/exec"
 "strings"

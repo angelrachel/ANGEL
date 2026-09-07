@@ -2,11 +2,8 @@ package kerberos
 
 import (
 "crypto/hmac"
-"crypto/rand"
 "crypto/sha256"
-"encoding/binary"
 "encoding/hex"
-"fmt"
 "time"
 )
 

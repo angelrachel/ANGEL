@@ -2,7 +2,6 @@ package cleanup
 
 import (
 "os"
-"path/filepath"
 )
 
 type ArtifactCleanup struct{}

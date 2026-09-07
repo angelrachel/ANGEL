@@ -1,7 +1,9 @@
+//go:build windows
+
 package windows
 
 import (
-"syscall"
+"golang.org/x/sys/windows"
 "unsafe"
 )
 
@@ -12,18 +14,27 @@ return &Clipboard{}
 }
 
 func (c *Clipboard) Capture() (string, error) {
-user32 := syscall.NewLazyDLL("user32.dll")
+user32 := windows.NewLazyDLL("user32.dll")
 procOpenClipboard := user32.NewProc("OpenClipboard")
 procGetClipboardData := user32.NewProc("GetClipboardData")
 procCloseClipboard := user32.NewProc("CloseClipboard")
 
-procOpenClipboard.Call(0)
-handle, _, _ := procGetClipboardData.Call(1)
-procCloseClipboard.Call()
+ret, _, _ := procOpenClipboard.Call(0)
+if ret == 0 {
+return "", nil
+}
+defer procCloseClipboard.Call()
 
+handle, _, _ := procGetClipboardData.Call(1)
 if handle == 0 {
 return "", nil
 }
-data := (*uint16)(unsafe.Pointer(handle))
-return syscall.UTF16ToString((*[1 << 20]uint16)(unsafe.Pointer(data))[:]), nil
+
+dataPtr := (*uint16)(unsafe.Pointer(handle))
+if dataPtr == nil {
+return "", nil
+}
+
+data := windows.UTF16ToString((*[1 << 20]uint16)(unsafe.Pointer(dataPtr))[:])
+return data, nil
 }

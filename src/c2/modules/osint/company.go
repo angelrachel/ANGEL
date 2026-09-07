@@ -2,7 +2,6 @@ package osint
 
 import (
 "encoding/json"
-"fmt"
 "net/http"
 )
 

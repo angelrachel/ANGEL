@@ -1,7 +1,6 @@
 package brain
 
 import (
-"time"
 )
 
 type AutonomousDecision struct {

@@ -2,7 +2,6 @@ package linux
 
 import (
 "os"
-"strconv"
 )
 
 type CronPersistence struct{}

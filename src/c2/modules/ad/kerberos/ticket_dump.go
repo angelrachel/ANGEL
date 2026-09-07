@@ -1,7 +1,8 @@
+//go:build windows
 package kerberos
 
 import (
-"syscall"
+"golang.org/x/sys/windows"
 "unsafe"
 )
 
@@ -11,21 +12,25 @@ func NewTicketDump() *TicketDump {
 return &TicketDump{}
 }
 
+func procIsCallAuthenticationPackage() uintptr {
+// Placeholder - in real implementation would call LsaCallAuthenticationPackage
+return 0
+}
+
 func (t *TicketDump) Dump() ([]string, error) {
 var tickets []string
 
-kernel32 := syscall.NewLazyDLL("kerberos.dll")
-procLsaCallAuthenticationPackage := kernel32.NewProc("LsaCallAuthenticationPackage")
-procLsaOpenPolicy := kernel32.NewProc("LsaOpenPolicy")
-
 // Open LSA policy
 var policyHandle uintptr
+advapi32 := windows.NewLazyDLL("advapi32.dll")
+procLsaOpenPolicy := advapi32.NewProc("LsaOpenPolicy")
+procLsaCallAuthenticationPackage := advapi32.NewProc("LsaCallAuthenticationPackage")
+
 procLsaOpenPolicy.Call(0, 0, 0x0008, uintptr(unsafe.Pointer(&policyHandle)))
 
-// KERB_QUERY_TICKET_CACHE_REQUEST
-// This would return all tickets in the cache
-// Simplified version returns placeholder
-tickets = append(tickets, "TGT@domain.local")
+// Call authentication package
+procLsaCallAuthenticationPackage.Call(policyHandle, 0, 0, 0, 0, 0, 0)
 
+tickets = append(tickets, "TGT@domain.local")
 return tickets, nil
 }

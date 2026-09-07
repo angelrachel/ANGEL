@@ -1,7 +1,6 @@
 package evidence
 
 import (
-"encoding/base64"
 "io"
 "net/http"
 "time"

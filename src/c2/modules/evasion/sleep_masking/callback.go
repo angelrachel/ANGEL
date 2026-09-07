@@ -1,7 +1,9 @@
+//go:build windows
+
 package sleep_masking
 
 import (
-"syscall"
+"golang.org/x/sys/windows"
 "time"
 )
 
@@ -18,11 +20,12 @@ time.Sleep(time.Duration(ms) * time.Millisecond)
 done <- true
 }()
 
-kernel32 := syscall.NewLazyDLL("kernel32.dll")
+kernel32 := windows.NewLazyDLL("kernel32.dll")
 procCallNamedPipe := kernel32.NewProc("CallNamedPipeW")
 
+name, _ := windows.UTF16PtrFromString("\\\\.\\pipe\\test")
 procCallNamedPipe.Call(
-uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr("\\\\.\\pipe\\test"))),
+uintptr(unsafe.Pointer(name)),
 0, 0, 0, 0, 0, 0,
 )
 

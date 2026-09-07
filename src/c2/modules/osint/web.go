@@ -2,9 +2,7 @@ package osint
 
 import (
 "crypto/tls"
-"fmt"
 "net/http"
-"regexp"
 "strings"
 "time"
 )

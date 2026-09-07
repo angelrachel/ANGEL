@@ -1,7 +1,10 @@
+//go:build windows
+
 package sleep_masking
 
 import (
-"syscall"
+"golang.org/x/sys/windows"
+"unsafe"
 )
 
 type ExceptionHandlerSleep struct{}
@@ -11,17 +14,18 @@ return &ExceptionHandlerSleep{}
 }
 
 func (e *ExceptionHandlerSleep) Sleep(ms int) error {
-kernel32 := syscall.NewLazyDLL("kernel32.dll")
+kernel32 := windows.NewLazyDLL("kernel32.dll")
 procAddVectoredExceptionHandler := kernel32.NewProc("AddVectoredExceptionHandler")
 procSleep := kernel32.NewProc("Sleep")
 
 handler := uintptr(1)
-procAddVectoredExceptionHandler.Call(handler, uintptr(unsafe.Pointer(&exceptionHandler)))
+// In real implementation, would add exception handler
+procAddVectoredExceptionHandler.Call(handler, uintptr(unsafe.Pointer(&exceptionHandlerFunc)))
 
 procSleep.Call(uintptr(ms))
 return nil
 }
 
-func exceptionHandler(exceptionInfo uintptr) uintptr {
+func exceptionHandlerFunc(exceptionInfo uintptr) uintptr {
 return 1
 }

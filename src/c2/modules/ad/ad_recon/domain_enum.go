@@ -1,7 +1,6 @@
 package ad_recon
 
 import (
-"fmt"
 "os/exec"
 "strings"
 )

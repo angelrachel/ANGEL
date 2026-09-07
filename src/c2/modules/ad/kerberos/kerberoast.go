@@ -1,7 +1,6 @@
 package kerberos
 
 import (
-"encoding/hex"
 "fmt"
 )
 

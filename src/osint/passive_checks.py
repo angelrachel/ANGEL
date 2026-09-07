@@ -41,9 +41,7 @@ def detect_cms_framework(headers: dict[str, str], body: str) -> list[PassiveSign
         "rails": "x-runtime",
     }
     return [
-        PassiveSignal("framework", name, "captured-response")
-        for name, marker in markers.items()
-        if marker in haystack
+        PassiveSignal("framework", name, "captured-response") for name, marker in markers.items() if marker in haystack
     ]
 
 
@@ -53,8 +51,7 @@ def detect_cloud_exposure(records: list[dict[str, object]]) -> list[PassiveSigna
         host = str(record.get("hostname", "")).lower()
         provider = str(record.get("provider", "")).lower()
         if any(
-            marker in host or marker in provider
-            for marker in ("s3", "blob.core", "storage.googleapis", "cloudfront")
+            marker in host or marker in provider for marker in ("s3", "blob.core", "storage.googleapis", "cloudfront")
         ):
             signals.add(PassiveSignal("cloud", host or provider, "captured-metadata"))
     return sorted(signals, key=lambda signal: signal.value)

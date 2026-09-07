@@ -24,11 +24,13 @@ def normalize_http_evidence(
         raise ValueError("unsupported HTTP method")
     if not 100 <= response_status <= 599 or not url.strip():
         raise ValueError("invalid HTTP evidence metadata")
+
     def clean(headers: dict[str, str]) -> dict[str, str]:
         return {
             key: ("[REDACTED]" if key.lower() in SENSITIVE_HEADERS else str(value))
             for key, value in sorted(headers.items())
         }
+
     evidence = {
         "request": {"method": method.upper(), "url": url, "headers": clean(request_headers)},
         "response": {"status": response_status, "headers": clean(response_headers), "body": body[:65536]},
