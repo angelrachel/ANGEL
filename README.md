@@ -42,6 +42,7 @@ The final row is deliberate. These capabilities are not required to validate the
 
 Operational procedures are documented in [`docs/OPERATIONS.md`](docs/OPERATIONS.md).
 The detailed section-by-section status is tracked in [`docs/BLUEPRINT_STATUS.md`](docs/BLUEPRINT_STATUS.md).
+The complete Indonesian handover checklist is in [`docs/PROJECT_STATUS_ID.md`](docs/PROJECT_STATUS_ID.md).
 
 ## Development
 
