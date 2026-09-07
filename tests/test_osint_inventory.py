@@ -8,7 +8,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import NameOID
 
-from src.osint.inventory import InventoryError, inventory_urls, parse_certificate
+from src.osint.inventory import InventoryError, fingerprint_response, inventory_urls, parse_certificate
 
 
 def test_inventory_is_scoped_and_deduplicated() -> None:
@@ -39,3 +39,11 @@ def test_certificate_metadata_parser() -> None:
     parsed = parse_certificate(cert.public_bytes(serialization.Encoding.PEM))
     assert parsed["dns_names"] == ["example.test"]
     assert len(str(parsed["sha256"])) == 64
+
+
+def test_passive_technology_fingerprint() -> None:
+    hints = fingerprint_response(
+        {"Server": "nginx", "X-Powered-By": "Express", "Content-Type": "application/graphql"},
+        "<script src='/wp-content/app.js'></script>",
+    )
+    assert hints == ["express", "graphql", "nginx", "wordpress"]

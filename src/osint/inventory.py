@@ -75,3 +75,26 @@ def _iso(value: datetime) -> str:
 
 
 __all__ = ["Asset", "InventoryError", "inventory_urls", "parse_certificate"]
+
+
+def fingerprint_response(headers: dict[str, str], body: str = "") -> list[str]:
+    """Infer coarse technology hints from already-captured response data."""
+    normalized = {key.lower(): value.lower() for key, value in headers.items()}
+    haystack = body.lower()
+    findings: set[str] = set()
+    server = normalized.get("server", "")
+    powered = normalized.get("x-powered-by", "")
+    if "nginx" in server:
+        findings.add("nginx")
+    if "apache" in server:
+        findings.add("apache")
+    if "express" in powered or "express" in haystack:
+        findings.add("express")
+    if "wordpress" in haystack or "wp-content" in haystack:
+        findings.add("wordpress")
+    if "graphql" in haystack or "graphql" in normalized.get("content-type", ""):
+        findings.add("graphql")
+    return sorted(findings)
+
+
+__all__ = ["Asset", "InventoryError", "fingerprint_response", "inventory_urls", "parse_certificate"]
