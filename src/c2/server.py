@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, ClassVar, cast
 from urllib.parse import parse_qs, urlparse
 
 from ..auth import AuthError, authenticate
+from ..config import Settings
 from ..evidence.chain import redact
 from ..reporting import Report
 from .crypto import CryptoError, ReplayGuard, SessionCipher
@@ -180,11 +180,11 @@ class C2Handler(BaseHTTPRequestHandler):
 
 
 def build_server(host: str = "127.0.0.1", port: int = 8000, database: str = "c2.db") -> ThreadingHTTPServer:
-    Store(database)
-    key = os.environ.get("ANGEL_OPERATOR_KEY", "development-operator-key")
-    material = hashlib.sha512(os.environ.get("ANGEL_SHARED_KEY", "development-only-key").encode()).digest()
+    settings = Settings.from_env(host=host, port=port, database=database)
+    key = settings.operator_key
+    material = hashlib.sha512(settings.shared_key.encode()).digest()
     handler = cast(type[C2Handler], type("ConfiguredC2Handler", (C2Handler,), {}))
-    handler.store = Store(database)
+    handler.store = Store(settings.database)
     handler.cipher = SessionCipher(material)
     handler.replay = ReplayGuard()
     handler.operator_key = key
