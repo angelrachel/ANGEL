@@ -37,7 +37,7 @@ class Task:
 
 
 class Store:
-    SCHEMA_VERSION = 1
+    SCHEMA_VERSION = 2
 
     def __init__(self, path: str | Path = "c2.db") -> None:
         self.path = str(path)
@@ -91,6 +91,13 @@ class Store:
                     id INTEGER PRIMARY KEY AUTOINCREMENT, scope_id INTEGER NOT NULL,
                     title TEXT NOT NULL, payload TEXT NOT NULL, created_at INTEGER NOT NULL,
                     FOREIGN KEY(scope_id) REFERENCES scopes(id)
+                );
+                CREATE TABLE IF NOT EXISTS rbac_principals (
+                    subject TEXT PRIMARY KEY, roles TEXT NOT NULL, revoked INTEGER NOT NULL DEFAULT 0
+                );
+                CREATE TABLE IF NOT EXISTS approvals (
+                    request_id TEXT PRIMARY KEY, actor TEXT NOT NULL, tool TEXT NOT NULL,
+                    approved INTEGER NOT NULL, reason TEXT NOT NULL, created_at INTEGER NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS idx_tasks_agent_status ON tasks(agent_id, status, expires_at);
                 CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_events(created_at);
@@ -382,6 +389,46 @@ class Store:
         if row is None:
             return None
         return ReportRecord(row["id"], row["scope_id"], row["title"], json.loads(row["payload"]), row["created_at"])
+
+    def save_principal(self, subject: str, roles: set[str], revoked: bool = False) -> None:
+        if not subject.strip() or not roles:
+            raise ValueError("principal subject and roles are required")
+        with self._connect() as db:
+            db.execute(
+                "INSERT INTO rbac_principals(subject, roles, revoked) VALUES (?, ?, ?) "
+                "ON CONFLICT(subject) DO UPDATE SET roles=excluded.roles, revoked=excluded.revoked",
+                (subject, json.dumps(sorted(roles)), int(revoked)),
+            )
+
+    def get_principal(self, subject: str) -> dict[str, Any] | None:
+        with self._connect() as db:
+            row = db.execute("SELECT * FROM rbac_principals WHERE subject = ?", (subject,)).fetchone()
+        if row is None:
+            return None
+        return {"subject": row["subject"], "roles": set(json.loads(row["roles"])), "revoked": bool(row["revoked"])}
+
+    def save_approval(self, request_id: str, actor: str, tool: str, approved: bool, reason: str) -> None:
+        if not all(item.strip() for item in (request_id, actor, tool, reason)):
+            raise ValueError("approval fields are required")
+        with self._connect() as db:
+            db.execute(
+                "INSERT INTO approvals(request_id, actor, tool, approved, reason, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (request_id, actor, tool, int(approved), reason, int(time.time())),
+            )
+
+    def get_approval(self, request_id: str) -> dict[str, Any] | None:
+        with self._connect() as db:
+            row = db.execute("SELECT * FROM approvals WHERE request_id = ?", (request_id,)).fetchone()
+        if row is None:
+            return None
+        return {
+            "request_id": row["request_id"],
+            "actor": row["actor"],
+            "tool": row["tool"],
+            "approved": bool(row["approved"]),
+            "reason": row["reason"],
+        }
 
 
 __all__ = ["Agent", "Task", "Store"]

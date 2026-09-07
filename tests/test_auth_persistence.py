@@ -26,6 +26,10 @@ def test_rbac_token_and_expiry() -> None:
 def test_scope_evidence_report_storage(tmp_path: Path) -> None:
     store = Store(tmp_path / "records.db")
     assert store.schema_version() == store.SCHEMA_VERSION
+    store.save_principal("alice", {"operator"})
+    assert store.get_principal("alice")["roles"] == {"operator"}
+    store.save_approval("req-1", "alice", "inventory", True, "lab")
+    assert store.get_approval("req-1")["approved"] is True
     scope = store.create_scope("engagement", ["example.test"], ["/api/"])
     evidence = store.add_evidence(scope.id, "request", "tester", {"status": 200}, "a" * 64)
     report = store.add_report(scope.id, "Report", {"findings": []})
