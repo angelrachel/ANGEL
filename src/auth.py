@@ -41,9 +41,11 @@ def issue_token(subject: str, role: str, ttl: int = 3600, now: int | None = None
         raise AuthError("unknown role")
     issued = int(time.time()) if now is None else now
     payload = {"sub": subject, "role": role, "exp": issued + ttl}
-    encoded = base64.urlsafe_b64encode(
-        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
-    ).decode().rstrip("=")
+    encoded = (
+        base64.urlsafe_b64encode(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode())
+        .decode()
+        .rstrip("=")
+    )
     signature = hmac.new(_secret(), encoded.encode(), hashlib.sha256).hexdigest()
     return f"{encoded}.{signature}"
 
