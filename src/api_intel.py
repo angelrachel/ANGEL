@@ -46,13 +46,7 @@ def inventory_openapi(document: dict[str, Any]) -> list[Endpoint]:
             )
             security = operation.get("security", document.get("security", []))
             security_names = tuple(
-                sorted(
-                    name
-                    for entry in security
-                    if isinstance(entry, dict)
-                    for name in entry
-                    if isinstance(name, str)
-                )
+                sorted(name for entry in security if isinstance(entry, dict) for name in entry if isinstance(name, str))
             )
             endpoints.append(
                 Endpoint(
