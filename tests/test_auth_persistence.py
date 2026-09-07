@@ -31,6 +31,11 @@ def test_scope_evidence_report_storage(tmp_path: Path) -> None:
     assert store.get_scope(scope.id) == scope
     assert evidence.scope_id == scope.id
     assert report.scope_id == scope.id
+    assert evidence.payload["status"] == 200
+    with pytest.raises(ValueError, match="SHA-256"):
+        store.add_evidence(scope.id, "response", "tester", {}, "invalid")
+    with pytest.raises(ValueError, match="paths"):
+        store.create_scope("bad", ["example.test"], ["api"])
 
 
 def test_rbac_api_endpoints(tmp_path: Path) -> None:

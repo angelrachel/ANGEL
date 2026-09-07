@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ..evidence.chain import redact
 from .policy import validate_task
 from .records import EvidenceRecordRow, ReportRecord, ScopeRecord
 
@@ -254,6 +256,12 @@ class Store:
     def create_scope(self, name: str, hosts: list[str], paths: list[str], expires_at: int | None = None) -> ScopeRecord:
         if not name.strip() or not hosts or not paths:
             raise ValueError("scope name, hosts, and paths are required")
+        if any(not isinstance(host, str) or not host.strip() for host in hosts):
+            raise ValueError("scope hosts must be non-empty strings")
+        if any(not isinstance(path, str) or not path.startswith("/") for path in paths):
+            raise ValueError("scope paths must start with /")
+        if expires_at is not None and expires_at <= int(time.time()):
+            raise ValueError("scope expiry must be in the future")
         with self._connect() as db:
             cursor = db.execute(
                 "INSERT INTO scopes(name, hosts, paths, expires_at, status) VALUES (?, ?, ?, ?, 'active')",
@@ -277,18 +285,27 @@ class Store:
     def add_evidence(
         self, scope_id: int, evidence_type: str, actor: str, payload: dict[str, Any], record_hash: str
     ) -> EvidenceRecordRow:
+        if self.get_scope(scope_id) is None:
+            raise ValueError("scope not found")
+        if not evidence_type.strip() or not actor.strip():
+            raise ValueError("evidence type and actor are required")
+        if not isinstance(payload, dict):
+            raise ValueError("evidence payload must be an object")
+        if not re.fullmatch(r"[0-9a-fA-F]{64}", record_hash):
+            raise ValueError("record hash must be a SHA-256 hex digest")
+        safe_payload = json.loads(redact(json.dumps(payload, sort_keys=True, separators=(",", ":"))))
         now = int(time.time())
         with self._connect() as db:
             cursor = db.execute(
                 "INSERT INTO evidence(scope_id, evidence_type, actor, payload, record_hash, created_at) "
                 "VALUES (?, ?, ?, ?, ?, ?)",
-                (scope_id, evidence_type, actor, json.dumps(payload, sort_keys=True), record_hash, now),
+                (scope_id, evidence_type, actor, json.dumps(safe_payload, sort_keys=True), record_hash, now),
             )
             if cursor.lastrowid is None:
                 raise RuntimeError("evidence insert did not return an id")
             evidence_id = cursor.lastrowid
         self.audit("evidence.added", actor, str(evidence_id), {"scope_id": scope_id, "type": evidence_type})
-        return EvidenceRecordRow(evidence_id, scope_id, evidence_type, actor, payload, record_hash, now)
+        return EvidenceRecordRow(evidence_id, scope_id, evidence_type, actor, safe_payload, record_hash, now)
 
     def add_report(self, scope_id: int, title: str, payload: dict[str, Any]) -> ReportRecord:
         now = int(time.time())
