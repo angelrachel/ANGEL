@@ -8,6 +8,9 @@ import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, ClassVar, cast
 
+from ..auth import AuthError, authenticate
+from ..evidence.chain import redact
+from ..reporting import Report
 from .crypto import CryptoError, ReplayGuard, SessionCipher
 from .policy import validate_task
 from .storage import Store
@@ -31,6 +34,12 @@ class C2Handler(BaseHTTPRequestHandler):
         supplied = self.headers.get("X-ANGEL-Key", "")
         return bool(supplied) and supplied == self.operator_key
 
+    def _principal(self) -> Any:
+        header = self.headers.get("Authorization", "")
+        if not header.startswith("Bearer "):
+            raise AuthError("bearer token required")
+        return authenticate(header[7:])
+
     def _body(self) -> dict[str, Any]:
         length = int(self.headers.get("Content-Length", "0"))
         if length <= 0 or length > 1_048_576:
@@ -53,7 +62,13 @@ class C2Handler(BaseHTTPRequestHandler):
         self._json(404, {"error": "not found"})
 
     def do_POST(self) -> None:  # noqa: N802
-        if not self._authorized() and self.path not in {"/register", "/healthz"}:
+        bearer_paths = {"/scope", "/evidence", "/report"}
+        has_bearer = self.headers.get("Authorization", "").startswith("Bearer ")
+        if (
+            not self._authorized()
+            and self.path not in {"/register", "/healthz"}
+            and not (self.path in bearer_paths and has_bearer)
+        ):
             self._json(401, {"error": "unauthorized"})
             return
         try:
@@ -104,8 +119,35 @@ class C2Handler(BaseHTTPRequestHandler):
                 self.store.record_result(task_id, agent_id, payload)
                 self._json(201, {"status": "recorded"})
                 return
+            if self.path == "/scope":
+                principal = self._principal()
+                if not principal.can("write"):
+                    raise AuthError("write permission required")
+                scope = self.store.create_scope(
+                    data["name"], data["hosts"], data.get("paths", ["/"]), data.get("expires_at")
+                )
+                self._json(201, {"id": scope.id, "name": scope.name, "status": scope.status})
+                return
+            if self.path == "/evidence":
+                principal = self._principal()
+                if not principal.can("evidence"):
+                    raise AuthError("evidence permission required")
+                payload = json.loads(redact(json.dumps(data.get("payload", {}))))
+                evidence = self.store.add_evidence(
+                    data["scope_id"], data["evidence_type"], principal.subject, payload, data["record_hash"]
+                )
+                self._json(201, {"id": evidence.id, "record_hash": evidence.record_hash})
+                return
+            if self.path == "/report":
+                principal = self._principal()
+                if not principal.can("report"):
+                    raise AuthError("report permission required")
+                report = Report(data["title"], data.get("engagement", ""))
+                record = self.store.add_report(data["scope_id"], report.title, report.to_dict())
+                self._json(201, {"id": record.id, "title": record.title})
+                return
             self._json(404, {"error": "not found"})
-        except (ValueError, json.JSONDecodeError) as exc:
+        except (ValueError, json.JSONDecodeError, AuthError, KeyError) as exc:
             self._json(400, {"error": str(exc)})
         except Exception:
             self._json(500, {"error": "internal error"})

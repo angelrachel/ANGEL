@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from .policy import validate_task
+from .records import EvidenceRecordRow, ReportRecord, ScopeRecord
 
 
 @dataclass(frozen=True)
@@ -67,6 +68,22 @@ class Store:
                     id INTEGER PRIMARY KEY AUTOINCREMENT, event_type TEXT NOT NULL,
                     actor TEXT NOT NULL, subject TEXT NOT NULL, details TEXT NOT NULL,
                     created_at INTEGER NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS scopes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
+                    hosts TEXT NOT NULL, paths TEXT NOT NULL, expires_at INTEGER,
+                    status TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS evidence (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT, scope_id INTEGER NOT NULL,
+                    evidence_type TEXT NOT NULL, actor TEXT NOT NULL, payload TEXT NOT NULL,
+                    record_hash TEXT NOT NULL, created_at INTEGER NOT NULL,
+                    FOREIGN KEY(scope_id) REFERENCES scopes(id)
+                );
+                CREATE TABLE IF NOT EXISTS reports (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT, scope_id INTEGER NOT NULL,
+                    title TEXT NOT NULL, payload TEXT NOT NULL, created_at INTEGER NOT NULL,
+                    FOREIGN KEY(scope_id) REFERENCES scopes(id)
                 );
                 CREATE INDEX IF NOT EXISTS idx_tasks_agent_status ON tasks(agent_id, status, expires_at);
                 CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_events(created_at);
@@ -145,6 +162,58 @@ class Store:
                 "INSERT INTO audit_events(event_type, actor, subject, details, created_at) VALUES (?, ?, ?, ?, ?)",
                 (event_type, actor, subject, json.dumps(details, sort_keys=True), int(time.time())),
             )
+
+    def create_scope(self, name: str, hosts: list[str], paths: list[str], expires_at: int | None = None) -> ScopeRecord:
+        if not name.strip() or not hosts or not paths:
+            raise ValueError("scope name, hosts, and paths are required")
+        with self._connect() as db:
+            cursor = db.execute(
+                "INSERT INTO scopes(name, hosts, paths, expires_at, status) VALUES (?, ?, ?, ?, 'active')",
+                (name, json.dumps(hosts), json.dumps(paths), expires_at),
+            )
+            if cursor.lastrowid is None:
+                raise RuntimeError("scope insert did not return an id")
+            scope_id = cursor.lastrowid
+        self.audit("scope.created", "operator", str(scope_id), {"name": name})
+        return ScopeRecord(scope_id, name, hosts, paths, expires_at, "active")
+
+    def get_scope(self, scope_id: int) -> ScopeRecord | None:
+        with self._connect() as db:
+            row = db.execute("SELECT * FROM scopes WHERE id = ?", (scope_id,)).fetchone()
+        if row is None:
+            return None
+        return ScopeRecord(
+            row["id"], row["name"], json.loads(row["hosts"]), json.loads(row["paths"]), row["expires_at"], row["status"]
+        )
+
+    def add_evidence(
+        self, scope_id: int, evidence_type: str, actor: str, payload: dict[str, Any], record_hash: str
+    ) -> EvidenceRecordRow:
+        now = int(time.time())
+        with self._connect() as db:
+            cursor = db.execute(
+                "INSERT INTO evidence(scope_id, evidence_type, actor, payload, record_hash, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (scope_id, evidence_type, actor, json.dumps(payload, sort_keys=True), record_hash, now),
+            )
+            if cursor.lastrowid is None:
+                raise RuntimeError("evidence insert did not return an id")
+            evidence_id = cursor.lastrowid
+        self.audit("evidence.added", actor, str(evidence_id), {"scope_id": scope_id, "type": evidence_type})
+        return EvidenceRecordRow(evidence_id, scope_id, evidence_type, actor, payload, record_hash, now)
+
+    def add_report(self, scope_id: int, title: str, payload: dict[str, Any]) -> ReportRecord:
+        now = int(time.time())
+        with self._connect() as db:
+            cursor = db.execute(
+                "INSERT INTO reports(scope_id, title, payload, created_at) VALUES (?, ?, ?, ?)",
+                (scope_id, title, json.dumps(payload, sort_keys=True), now),
+            )
+            if cursor.lastrowid is None:
+                raise RuntimeError("report insert did not return an id")
+            report_id = cursor.lastrowid
+        self.audit("report.created", "operator", str(report_id), {"scope_id": scope_id, "title": title})
+        return ReportRecord(report_id, scope_id, title, payload, now)
 
 
 __all__ = ["Agent", "Task", "Store"]
