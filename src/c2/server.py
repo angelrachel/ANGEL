@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, ClassVar, cast
 from urllib.parse import parse_qs, urlparse
@@ -11,6 +12,8 @@ from urllib.parse import parse_qs, urlparse
 from ..api_rate_limit import RateLimiter, RateLimitError
 from ..auth import AuthError, authenticate
 from ..config import Settings
+from ..event_stream import EventStream
+from ..events import make_event
 from ..evidence.chain import redact
 from ..reporting import Report
 from .crypto import CryptoError, ReplayGuard, SessionCipher
@@ -78,6 +81,7 @@ class C2Handler(BaseHTTPRequestHandler):
     replay: ClassVar[ReplayGuard]
     operator_key: ClassVar[str]
     limiter: ClassVar[RateLimiter]
+    stream: ClassVar[EventStream]
 
     def _json(self, status: int, payload: dict[str, Any]) -> None:
         body = json.dumps(payload, sort_keys=True).encode()
@@ -168,6 +172,20 @@ class C2Handler(BaseHTTPRequestHandler):
                 return
             self._json(200, {"events": events})
             return
+        if parsed.path == "/events":
+            query = parse_qs(parsed.query)
+            try:
+                cursor = int(query.get("cursor", ["0"])[0])
+                limit = int(query.get("limit", ["100"])[0])
+                items = self.stream.since(cursor, limit)
+            except ValueError as exc:
+                self._json(400, {"error": str(exc)})
+                return
+            self._json(
+                200,
+                {"events": [{"cursor": item.cursor, **item.event.to_dict()} for item in items]},
+            )
+            return
         self._json(404, {"error": "not found"})
 
     def do_POST(self) -> None:  # noqa: N802
@@ -194,6 +212,15 @@ class C2Handler(BaseHTTPRequestHandler):
                     raise ValueError("missing agent registration field")
                 agent = self.store.upsert_agent(data["agent_id"], data["hostname"], data["os"], data["arch"])
                 status = "registered" if parsed_path == "/register" else "heartbeat_ack"
+                self.stream.publish(
+                    make_event(
+                        parsed_path.lstrip("/"),
+                        data["agent_id"],
+                        data["agent_id"],
+                        {},
+                        event_id=str(uuid.uuid4()),
+                    )
+                )
                 self._json(200, {"status": status, "agent_id": agent.id, "last_seen": agent.last_seen})
                 return
             if parsed_path == "/task/queue":
@@ -207,6 +234,15 @@ class C2Handler(BaseHTTPRequestHandler):
                     return
                 validate_task(task_type, payload)
                 queued_task = self.store.enqueue_task(agent_id, task_type, payload)
+                self.stream.publish(
+                    make_event(
+                        "task.queued",
+                        "operator",
+                        str(queued_task.id),
+                        {"agent_id": agent_id},
+                        event_id=str(uuid.uuid4()),
+                    )
+                )
                 self._json(202, {"task_id": queued_task.id, "status": queued_task.status})
                 return
             if parsed_path == "/task/claim":
@@ -233,6 +269,9 @@ class C2Handler(BaseHTTPRequestHandler):
                 if not isinstance(task_id, int) or not isinstance(agent_id, str) or not isinstance(payload, dict):
                     raise ValueError("invalid result fields")
                 self.store.record_result(task_id, agent_id, payload)
+                self.stream.publish(
+                    make_event("task.completed", agent_id, str(task_id), {}, event_id=str(uuid.uuid4()))
+                )
                 self._json(201, {"status": "recorded"})
                 return
             if parsed_path == "/scope":
@@ -285,6 +324,7 @@ def build_server(host: str = "127.0.0.1", port: int = 8000, database: str = "c2.
     handler.replay = ReplayGuard()
     handler.operator_key = key
     handler.limiter = RateLimiter()
+    handler.stream = EventStream()
     return ThreadingHTTPServer((host, port), handler)
 
 

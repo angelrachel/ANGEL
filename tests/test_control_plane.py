@@ -151,6 +151,8 @@ def test_http_lifecycle(tmp_path: Path) -> None:
     assert result["status"] == "recorded"
     with urlopen(Request(base + "/tasks?agent_id=a1", headers=headers), timeout=2) as response:
         assert json.loads(response.read())["tasks"][0]["status"] == "completed"
+    with urlopen(Request(base + "/events?cursor=0", headers=headers), timeout=2) as response:
+        assert json.loads(response.read())["events"]
     token_headers = {"Authorization": f"Bearer {issue_token('auditor', 'auditor')}"}
     with urlopen(Request(base + "/audit?limit=5", headers=token_headers), timeout=2) as response:
         assert json.loads(response.read())["events"]
