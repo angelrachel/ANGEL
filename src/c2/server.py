@@ -239,7 +239,7 @@ class C2Handler(BaseHTTPRequestHandler):
                 principal = self._principal()
                 if not principal.can("report"):
                     raise AuthError("report permission required")
-                report = Report(data["title"], data.get("engagement", ""))
+                report = Report(data["title"], data.get("engagement", "control-plane"))
                 record = self.store.add_report(data["scope_id"], report.title, report.to_dict())
                 self._json(201, {"id": record.id, "title": record.title})
                 return

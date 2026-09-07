@@ -62,3 +62,12 @@ def test_report_exports() -> None:
     markdown = report.to_markdown()
     assert "Cross-tenant access" in markdown
     assert json.loads(report.to_json())["findings"][0]["severity"] == "high"
+
+
+def test_report_validation_rejects_malformed_findings() -> None:
+    with pytest.raises(ValueError, match="severity"):
+        Finding("Title", "urgent", "high", "asset", "Summary", "Impact", ["step"], "Fix")
+    with pytest.raises(ValueError, match="confidence"):
+        Finding("Title", "high", "certain", "asset", "Summary", "Impact", ["step"], "Fix")
+    with pytest.raises(ValueError, match="engagement"):
+        Report("Title", "")

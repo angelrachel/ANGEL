@@ -19,6 +19,16 @@ class Finding:
     remediation: str
     evidence_refs: list[str] = field(default_factory=list)
 
+    def __post_init__(self) -> None:
+        if self.severity not in {"critical", "high", "medium", "low", "info"}:
+            raise ValueError("invalid finding severity")
+        if self.confidence not in {"high", "medium", "low"}:
+            raise ValueError("invalid finding confidence")
+        if not self.title.strip() or not self.asset.strip() or not self.summary.strip():
+            raise ValueError("finding title, asset, and summary are required")
+        if not self.reproduction:
+            raise ValueError("finding reproduction steps are required")
+
 
 @dataclass
 class Report:
@@ -26,6 +36,12 @@ class Report:
     engagement: str
     findings: list[Finding] = field(default_factory=list)
     executive_summary: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.title.strip():
+            raise ValueError("report title is required")
+        if not self.engagement.strip():
+            raise ValueError("report engagement is required")
 
     def add(self, finding: Finding) -> None:
         self.findings.append(finding)
