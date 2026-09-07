@@ -1,50 +1,88 @@
-# ANGEL — Authorized Security Assessment Control Plane
+# ANGEL — Authorized Red-Team Attack Platform
 
-ANGEL is a control-plane foundation for **authorized, non-destructive security assessments**. It provides scope enforcement, operator authentication, rate limiting, evidence integrity, reporting, passive reconnaissance, and deterministic simulation for training and validation.
+ANGEL adalah platform modular untuk **authorized red-team operations** dan security research di lingkungan yang memiliki izin tertulis. Repository ini merepresentasikan project pure-attack yang terpisah dari project defensive/safety control-plane.
 
-## Current status
+> **Authorization required:** gunakan hanya pada lab, aset milik sendiri, atau engagement dengan ruang lingkup dan Rules of Engagement tertulis. Repository ini tidak memberikan izin untuk menguji sistem pihak ketiga.
 
-The repository contains a tested defensive foundation. Offensive execution is intentionally not implemented.
+## Project identity
 
-### Implemented foundation
+ANGEL dirancang sebagai ekosistem multi-layer yang menggabungkan C2 framework, attack modules, orchestrator, infrastructure, evidence, reporting, dan cleanup lifecycle. Blueprint utama project ini adalah `struktursealangel_ANGEL(3).pdf`.
 
-- Fail-closed scope policy with host/path allowlists, expiry, private-address blocking, and rate limiting.
-- Operator authentication, RBAC, replay protection, encrypted sessions, and event streaming.
-- Evidence normalization and hash-chain support for chain of custody.
-- Passive inventory and reporting primitives.
-- Rules of Engagement validation with explicit authorization windows and emergency contacts.
-- Explicit safety capability allowlist and request rejection guardrails.
-- CI quality gates for linting, typing, security scanning, tests, dependency auditing, and container builds.
+Repository ini masih dalam tahap pengembangan. Nama file atau folder tidak otomatis berarti seluruh capability telah selesai. Setiap domain harus dinilai berdasarkan status aktualnya: **implemented**, **partial**, **skeleton**, atau **planned**.
 
-## Safety boundary
+## Target architecture
 
-ANGEL must not be used to deploy implants, exploit third-party systems, steal credentials, evade endpoint controls, establish persistence, move laterally, exfiltrate data, destroy data, or clear forensic records. The repository deliberately does not implement those capabilities.
+| Layer | Domain | Target responsibility |
+|---|---|---|
+| Layer 1 | Infrastructure | Provisioning, separation, redirector, VPN, firewall, and deployment configuration |
+| Layer 2 | C2 Framework | Implant, teamserver, listeners, profiles, cryptography, task/result flow, and SMB beacon |
+| Layer 3 | Orchestrator | Routing, workflow coordination, fireteam execution, approvals, state, and MCP integration |
+| Layer 4 | API Gateway | Operator API, authentication, authorization, validation, rate limiting, and real-time transport |
+| Layer 5 | Frontend | Operator dashboard, agent console, monitoring, evidence, and report viewer |
+| Layer 6 | Assessment Domains | Reconnaissance, exploitation, post-exploitation, persistence, collection, impact, evidence, reporting, and cleanup |
 
-Use only with written authorization and a defined engagement scope. Prefer a lab or staging environment, synthetic data, and read-only checks. Every active check must be separately approved and auditable.
+The target design follows functional separation between infrastructure components. Actual deployment readiness must be verified against the Terraform, Ansible, container, and reverse-proxy configuration before use.
 
 ## Blueprint coverage
 
-| Blueprint area | Repository implementation | Status |
+| Blueprint domain | Repository area | Current audit status |
 |---|---|---|
-| Architecture and control plane | `src/c2`, `src/auth.py`, `src/rbac.py`, `src/orchestrator` | Implemented foundation |
-| Scope and rules of engagement | `src/scope.py`, `src/engagement.py` | Implemented, fail-closed |
-| Auditable assessment planning | `src/assessment.py` | Passive/simulation checks only |
-| Passive reconnaissance and inventory | `src/osint`, `src/api_intel.py`, `src/graphql_intel.py` | Implemented, non-destructive |
-| Passive observation findings | `src/passive_findings.py` | Implemented, conservative informational severity |
-| Evidence and chain of custody | `src/evidence` | Implemented with redaction and hash chain |
-| Evidence export verification | `src/evidence/manifest.py` | Implemented with deterministic manifest hash |
-| Reporting | `src/reporting.py`, `src/report/export.py` | Implemented in Markdown and JSON |
-| Approval, replay, cancellation, and bounded workflows | `src/orchestrator`, `src/cancellation.py` | Implemented |
-| Deployment separation and hardening | `deploy/`, `Dockerfile`, `docker-compose.yml` | Lab-ready baseline |
-| Implant execution, credential theft, persistence, evasion, lateral movement, rootkits, destructive impact | Intentionally absent | Owner-only / not implemented |
+| C2 framework | `src/c2/` | Partial; core and module skeletons exist |
+| Decoy/deception | `src/c2/server/decoy/`, `deploy/nginx/` | Partial |
+| SQL injection | `src/c2/modules/`, `src/sqli/` | Partial; coverage and safety boundaries require verification |
+| NoSQL injection | `src/c2/modules/exploitation/nosqli/` | Partial |
+| Database post-exploitation | `src/c2/modules/post_exploitation/` | Skeleton/partial; implementation must be verified per DBMS |
+| Evasion and stealth | `src/c2/modules/evasion/`, `src/c2/modules/network_evasion/` | Skeleton/partial |
+| Kerberos and Active Directory | `src/c2/modules/ad/` | Skeleton/partial |
+| Lateral movement | `src/c2/modules/lateral/` | Skeleton/partial |
+| Persistence | `src/c2/modules/persistence/` | Partial; platform coverage is incomplete |
+| Hardware rootkit | `src/c2/modules/rootkit/` | Skeleton/planned; hardware validation is not established |
+| Credential access | `src/c2/modules/cred/`, `src/c2/modules/credential/` | Partial; platform-specific behavior requires verification |
+| Collector/infostealer | `src/c2/modules/collector/` | Skeleton/partial |
+| Destruction and impact | `src/c2/modules/destruct_impact/`, `src/c2/modules/destruction/` | Partial; use only in isolated, approved test environments |
+| Orchestrator and brain | `src/c2/orchestrator/`, `src/orchestrator/` | Partial |
+| Infrastructure | `deploy/` | Lab baseline; deployment references require validation |
+| OSINT and reconnaissance | `src/c2/osint/`, `src/osint/` | Partial; passive and active coverage differ |
+| Exploitation | `src/c2/modules/exploitation/`, `src/exploit/` | Partial |
+| Forensic evidence | `src/evidence/`, `src/c2/evidence/` | Foundation implemented; end-to-end verification required |
+| Reporting | `src/report/`, `src/reporting.py`, `src/c2/reporting/` | Partial |
+| Cleanup and deletion | `src/cleanup/`, `src/c2/modules/cleanup/` | Partial; cleanup behavior must be verified before use |
 
-The final row is deliberate. These capabilities are not required to validate the defensive control-plane foundation and would create unacceptable risk without a separately reviewed lab, authorization package, and safety design.
+This table is an engineering status guide, not a claim that every blueprint item is complete.
 
-Operational procedures are documented in [`docs/OPERATIONS.md`](docs/OPERATIONS.md).
-The detailed section-by-section status is tracked in [`docs/BLUEPRINT_STATUS.md`](docs/BLUEPRINT_STATUS.md).
-The complete Indonesian handover checklist is in [`docs/PROJECT_STATUS_ID.md`](docs/PROJECT_STATUS_ID.md).
+## Repository layout
 
-## Development
+```text
+ANGEL/
+├── src/
+│   ├── c2/                 # Go/Python C2, server, implant, and modules
+│   ├── orchestrator/       # Workflow and policy primitives
+│   ├── osint/              # Reconnaissance and inventory support
+│   ├── evidence/           # Evidence normalization and integrity support
+│   └── report/             # Report export support
+├── deploy/                 # Terraform, Ansible, Nginx, and deployment scripts
+├── tests/                  # Automated tests currently focused on foundation code
+├── docs/                   # Operations and status documentation
+└── go.mod / pyproject.toml # Language and tooling configuration
+```
+
+## Development status
+
+The repository contains a mixture of working foundation code, partial modules, and placeholders. Before treating a domain as operational, verify its source implementation, tests, platform assumptions, error handling, authorization boundary, and deployment path.
+
+The following items remain important engineering work:
+
+1. Complete the missing or partial blueprint components and document their real status.
+2. Validate all Go and Python build targets with pinned toolchain versions.
+3. Add tests for C2 protocol behavior, module boundaries, deployment configuration, and failure handling.
+4. Replace hardcoded development values with configured secrets and environment-specific settings.
+5. Remove generated binaries, local databases, debug artifacts, and other build output from source control unless there is a documented release reason.
+6. Verify Terraform, Ansible, Nginx, container, certificate, and network-separation configuration in an isolated lab.
+7. Keep evidence, authorization records, target inventory, and engagement data outside the public source tree.
+
+## Local validation
+
+Use the project-specific toolchain and dependency lock files when available. The intended baseline checks are:
 
 ```bash
 python -m pip install -r requirements.txt
@@ -52,17 +90,18 @@ pytest -q
 ruff check src tests
 mypy src
 bandit -q -r src
+go test ./...
+go vet ./...
 ```
 
-## Remaining work for the owner
+The commands above are validation targets. A successful documentation check must not be inferred unless the required tools are installed and the commands complete successfully.
 
-1. Replace placeholder contact and deployment values with organization-approved values.
-2. Define the written rules of engagement, asset inventory, retention period, and incident escalation contacts.
-3. Configure production secrets through a secret manager; never commit `.env` files or keys.
-4. Review Terraform/Ansible plans with the infrastructure owner before applying them.
-5. Decide which passive data sources are legally and contractually permitted.
-6. Perform a human security review and authorize any future active testing modules.
+## Security and operational boundary
+
+ANGEL is intended for controlled, authorized red-team research. Keep test assets isolated, define an engagement scope before execution, use synthetic data where possible, preserve evidence according to the engagement policy, and stop when an asset falls outside the approved scope.
+
+Do not commit credentials, tokens, private keys, customer data, target inventories, engagement evidence, generated binaries, or unreviewed destructive test artifacts. Review `SECURITY.md` and `docs/OPERATIONS.md` before any lab deployment.
 
 ## License and authorization
 
-No production deployment or external assessment is authorized by this repository alone. Obtain explicit, written permission from the system owner before running any active test.
+No production deployment or external assessment is authorized by this repository alone. Obtain explicit written permission from the system owner, define the permitted targets and techniques, and document rollback and emergency procedures before use.
