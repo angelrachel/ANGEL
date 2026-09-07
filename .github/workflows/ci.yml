@@ -41,7 +41,7 @@ jobs:
         run: bandit -q -r src
 
       - name: Pytest
-        run: pytest --cov=src --cov-report=term-missing --cov-fail-under=80
+        run: pytest --cov=src --cov-report=term-missing --cov-report=xml --junitxml=test-results.xml --cov-fail-under=80
 
       - name: Compile check
         run: python -m compileall -q src
@@ -62,3 +62,13 @@ jobs:
           python -m compileall -q src
           test -f Dockerfile
           test -f docker-compose.yml
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: angel-ci-diagnostics
+          path: |
+            test-results.xml
+            coverage.xml
+          if-no-files-found: ignore

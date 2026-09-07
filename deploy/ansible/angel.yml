@@ -1,0 +1,30 @@
+- name: Deploy ANGEL control plane lab
+  hosts: angel
+  become: true
+  vars:
+    angel_image: "angel-control-plane:latest"
+    angel_container: "angel-control-plane"
+  tasks:
+    - name: Ensure ANGEL data directory exists
+      ansible.builtin.file:
+        path: /var/lib/angel
+        state: directory
+        owner: 10001
+        group: 10001
+        mode: "0750"
+
+    - name: Run ANGEL control plane container
+      community.docker.docker_container:
+        name: "{{ angel_container }}"
+        image: "{{ angel_image }}"
+        restart_policy: unless-stopped
+        user: "10001:10001"
+        published_ports:
+          - "8000:8000"
+        volumes:
+          - /var/lib/angel:/data
+        healthcheck:
+          test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/healthz', timeout=3)"]
+          interval: 30s
+          timeout: 5s
+          retries: 3
