@@ -41,6 +41,16 @@ def openapi_document() -> dict[str, Any]:
             "/audit": {
                 "get": {"security": [{"bearerAuth": []}], "responses": {"200": {"description": "Audit events"}}}
             },
+            "/events": {
+                "get": {
+                    "security": [{"operatorKey": []}],
+                    "parameters": [
+                        {"name": "cursor", "in": "query", "schema": {"type": "integer", "minimum": 0}},
+                        {"name": "limit", "in": "query", "schema": {"type": "integer", "minimum": 1, "maximum": 500}},
+                    ],
+                    "responses": {"200": {"description": "Event stream items"}},
+                }
+            },
             "/register": {
                 "post": {"security": [{"operatorKey": []}], "responses": {"200": {"description": "Registered"}}}
             },
