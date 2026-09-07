@@ -28,6 +28,7 @@ Use only with written authorization and a defined engagement scope. Prefer a lab
 |---|---|---|
 | Architecture and control plane | `src/c2`, `src/auth.py`, `src/rbac.py`, `src/orchestrator` | Implemented foundation |
 | Scope and rules of engagement | `src/scope.py`, `src/engagement.py` | Implemented, fail-closed |
+| Auditable assessment planning | `src/assessment.py` | Passive/simulation checks only |
 | Passive reconnaissance and inventory | `src/osint`, `src/api_intel.py`, `src/graphql_intel.py` | Implemented, non-destructive |
 | Evidence and chain of custody | `src/evidence` | Implemented with redaction and hash chain |
 | Reporting | `src/reporting.py`, `src/report/export.py` | Implemented in Markdown and JSON |
