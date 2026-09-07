@@ -41,6 +41,7 @@ Use only with written authorization and a defined engagement scope. Prefer a lab
 The final row is deliberate. These capabilities are not required to validate the defensive control-plane foundation and would create unacceptable risk without a separately reviewed lab, authorization package, and safety design.
 
 Operational procedures are documented in [`docs/OPERATIONS.md`](docs/OPERATIONS.md).
+The detailed section-by-section status is tracked in [`docs/BLUEPRINT_STATUS.md`](docs/BLUEPRINT_STATUS.md).
 
 ## Development
 

@@ -29,7 +29,14 @@ resource "docker_container" "control_plane" {
   ports {
     internal = 8000
     external = 8000
+    ip       = "127.0.0.1"
   }
 
+  read_only     = true
+  cap_drop      = ["ALL"]
+  security_opts = ["no-new-privileges:true"]
+  tmpfs = {
+    "/tmp" = "rw,noexec,nosuid,size=16m"
+  }
   restart = "unless-stopped"
 }

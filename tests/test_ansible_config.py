@@ -8,3 +8,6 @@ def test_ansible_deployment_is_non_root_and_health_checked() -> None:
     assert "user: \"10001:10001\"" in config
     assert "healthcheck:" in config
     assert "/var/lib/angel:/data" in config
+    assert '"127.0.0.1:8000:8000"' in config
+    assert "read_only: true" in config
+    assert "no-new-privileges:true" in config
