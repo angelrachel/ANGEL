@@ -51,3 +51,14 @@ jobs:
 
       - name: Secret scan
         run: detect-secrets scan --all-files --force-use-all-plugins
+
+      - name: Dependency scan
+        run: |
+          python -m pip install pip-audit
+          pip-audit -r requirements.txt
+
+      - name: Source artifact check
+        run: |
+          python -m compileall -q src
+          test -f Dockerfile
+          test -f docker-compose.yml
