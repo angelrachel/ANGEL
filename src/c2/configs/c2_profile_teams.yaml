@@ -1,0 +1,11 @@
+user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Teams/1.0.0 Chrome/120.0.0.0 Safari/537.36"
+uri:
+  - "/api/v2/updates"
+  - "/cdn/content/stream"
+  - "/media/config"
+  - "/edge/status"
+headers:
+  - "X-Telemetry-Id"
+  - "X-Client-Version"
+server: "Microsoft-IIS/10.0"
+status_code: 200
