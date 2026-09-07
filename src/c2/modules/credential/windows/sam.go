@@ -24,18 +24,8 @@ return false
 return true
 }
 
-func DumpSecurity() bool {
-cmd := exec.Command("cmd", "/c", "reg save HKLM\\SECURITY security.hive /y")
-err := cmd.Run()
-if err != nil {
-return false
-}
-return true
-}
-
 func DumpAllHives() bool {
 DumpSAM()
 DumpSystem()
-DumpSecurity()
 return true
 }

