@@ -1,65 +1,62 @@
+//go:build windows
+
 package ad_recon
 
 import (
 "os/exec"
-"strings"
 )
 
-type UserEnum struct {
-Domain string
-}
-
-func NewUserEnum(domain string) *UserEnum {
-return &UserEnum{
-Domain: domain,
-}
-}
-
-func (u *UserEnum) GetUsers() ([]string, error) {
-cmd := exec.Command("net", "user", "/domain")
+func EnumerateUser(username string) string {
+cmd := exec.Command("cmd", "/c", "net user "+username+" /domain")
 output, err := cmd.Output()
 if err != nil {
-return nil, err
+return ""
+}
+return string(output)
 }
 
-var users []string
-lines := strings.Split(string(output), "\n")
-inUsers := false
-for _, line := range lines {
-if strings.Contains(line, "---") {
-inUsers = true
-continue
-}
-if inUsers && strings.TrimSpace(line) != "" && !strings.Contains(line, "command completed") {
-fields := strings.Fields(line)
-for _, f := range fields {
-if len(f) > 0 {
-users = append(users, f)
-}
-}
-}
-}
-return users, nil
-}
-
-func (u *UserEnum) GetAdminUsers() ([]string, error) {
-cmd := exec.Command("net", "group", "Domain Admins", "/domain")
+func EnumerateUserSPN() string {
+cmd := exec.Command("cmd", "/c", "setspn -Q */*")
 output, err := cmd.Output()
 if err != nil {
-return nil, err
+return ""
+}
+return string(output)
 }
 
-var admins []string
-lines := strings.Split(string(output), "\n")
-inMembers := false
-for _, line := range lines {
-if strings.Contains(line, "---") {
-inMembers = true
-continue
+func EnumerateUserSessions() string {
+cmd := exec.Command("cmd", "/c", "qwinsta")
+output, err := cmd.Output()
+if err != nil {
+return ""
 }
-if inMembers && strings.TrimSpace(line) != "" && !strings.Contains(line, "command completed") {
-admins = append(admins, strings.TrimSpace(line))
+return string(output)
 }
+
+func EnumerateUserPrivileges() string {
+cmd := exec.Command("cmd", "/c", "whoami /priv")
+output, err := cmd.Output()
+if err != nil {
+return ""
 }
-return admins, nil
+return string(output)
+}
+
+func EnumerateUserGroups() string {
+cmd := exec.Command("cmd", "/c", "whoami /groups")
+output, err := cmd.Output()
+if err != nil {
+return ""
+}
+return string(output)
+}
+
+func DumpUser(username string) string {
+var result string
+result += EnumerateUser(username)
+result += EnumerateUserSPN()
+result += EnumerateUserSessions()
+result += EnumerateUserPrivileges()
+result += EnumerateUserGroups()
+return result
 }

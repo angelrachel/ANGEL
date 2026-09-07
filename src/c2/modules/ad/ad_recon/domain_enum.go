@@ -1,57 +1,62 @@
+//go:build windows
+
 package ad_recon
 
 import (
 "os/exec"
-"strings"
 )
 
-type DomainEnum struct {
-Domain string
-}
-
-func NewDomainEnum(domain string) *DomainEnum {
-return &DomainEnum{
-Domain: domain,
-}
-}
-
-func (d *DomainEnum) GetDomainInfo() (map[string]string, error) {
-info := make(map[string]string)
-
-// Get domain name
-cmd := exec.Command("nltest", "/dsgetdc:", d.Domain)
+func EnumerateDomain() string {
+cmd := exec.Command("cmd", "/c", "net view /domain")
 output, err := cmd.Output()
 if err != nil {
-return nil, err
+return ""
+}
+return string(output)
 }
 
-lines := strings.Split(string(output), "\n")
-for _, line := range lines {
-if strings.Contains(line, "Domain") {
-info["domain"] = strings.TrimSpace(strings.Split(line, ":")[1])
-}
-if strings.Contains(line, "Dns Forest") {
-info["forest"] = strings.TrimSpace(strings.Split(line, ":")[1])
-}
-}
-
-return info, nil
-}
-
-func (d *DomainEnum) GetDomainControllers() ([]string, error) {
-cmd := exec.Command("nltest", "/dclist:", d.Domain)
+func EnumerateDomainController() string {
+cmd := exec.Command("cmd", "/c", "nltest /dclist:angel.local")
 output, err := cmd.Output()
 if err != nil {
-return nil, err
+return ""
+}
+return string(output)
 }
 
-var dcs []string
-lines := strings.Split(string(output), "\n")
-for _, line := range lines {
-if strings.Contains(line, "\\") {
-dc := strings.TrimSpace(strings.Split(line, "\\")[1])
-dcs = append(dcs, dc)
+func EnumerateDomainUsers() string {
+cmd := exec.Command("cmd", "/c", "net user /domain")
+output, err := cmd.Output()
+if err != nil {
+return ""
 }
+return string(output)
 }
-return dcs, nil
+
+func EnumerateDomainGroups() string {
+cmd := exec.Command("cmd", "/c", "net group /domain")
+output, err := cmd.Output()
+if err != nil {
+return ""
+}
+return string(output)
+}
+
+func EnumerateTrusts() string {
+cmd := exec.Command("cmd", "/c", "nltest /domain_trusts")
+output, err := cmd.Output()
+if err != nil {
+return ""
+}
+return string(output)
+}
+
+func DumpAll() string {
+var result string
+result += EnumerateDomain()
+result += EnumerateDomainController()
+result += EnumerateDomainUsers()
+result += EnumerateDomainGroups()
+result += EnumerateTrusts()
+return result
 }

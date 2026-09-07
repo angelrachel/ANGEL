@@ -3,32 +3,23 @@
 package sleep_masking
 
 import (
-"golang.org/x/sys/windows"
 "time"
 )
 
-type CallbackSleep struct{}
-
-func NewCallbackSleep() *CallbackSleep {
-return &CallbackSleep{}
+func SleepWithCallback(duration time.Duration, callback func()) {
+if callback == nil {
+return
+}
+time.Sleep(duration)
+callback()
 }
 
-func (c *CallbackSleep) Sleep(ms int) error {
-done := make(chan bool)
-go func() {
-time.Sleep(time.Duration(ms) * time.Millisecond)
-done <- true
-}()
-
-kernel32 := windows.NewLazyDLL("kernel32.dll")
-procCallNamedPipe := kernel32.NewProc("CallNamedPipeW")
-
-name, _ := windows.UTF16PtrFromString("\\\\.\\pipe\\test")
-procCallNamedPipe.Call(
-uintptr(unsafe.Pointer(name)),
-0, 0, 0, 0, 0, 0,
-)
-
-<-done
-return nil
+func SleepWithCallbackAndMask(duration time.Duration, callback func(), masker *SleepMasker) {
+if callback == nil {
+return
+}
+masker.EncryptRegion()
+time.Sleep(duration)
+masker.DecryptRegion()
+callback()
 }

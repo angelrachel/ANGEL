@@ -1,38 +1,41 @@
+//go:build windows
+
 package ad_recon
 
 import (
 "os/exec"
-"strings"
 )
 
-type GPOEnum struct {
-Domain string
-}
-
-func NewGPOEnum(domain string) *GPOEnum {
-return &GPOEnum{
-Domain: domain,
-}
-}
-
-func (g *GPOEnum) GetGPOs() ([]string, error) {
-cmd := exec.Command("gpresult", "/r", "/scope", "computer")
+func EnumerateGPOs() string {
+cmd := exec.Command("cmd", "/c", "gpresult /r")
 output, err := cmd.Output()
 if err != nil {
-return nil, err
+return ""
+}
+return string(output)
 }
 
-var gpos []string
-lines := strings.Split(string(output), "\n")
-inGPOs := false
-for _, line := range lines {
-if strings.Contains(line, "Applied Group Policy Objects") {
-inGPOs = true
-continue
+func EnumerateGPOReport() string {
+cmd := exec.Command("cmd", "/c", "gpresult /h report.html")
+output, err := cmd.Output()
+if err != nil {
+return ""
 }
-if inGPOs && strings.TrimSpace(line) != "" {
-gpos = append(gpos, strings.TrimSpace(line))
+return string(output)
 }
+
+func EnumerateGPOFromDC(domain string) string {
+cmd := exec.Command("cmd", "/c", "Get-GPO -All -Domain "+domain)
+output, err := cmd.Output()
+if err != nil {
+return ""
 }
-return gpos, nil
+return string(output)
+}
+
+func DumpAllGPOs() string {
+var result string
+result += EnumerateGPOs()
+result += EnumerateGPOReport()
+return result
 }

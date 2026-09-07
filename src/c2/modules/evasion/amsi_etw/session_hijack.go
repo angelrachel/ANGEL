@@ -3,24 +3,25 @@
 package amsi_etw
 
 import (
-"golang.org/x/sys/windows"
+"syscall"
 "unsafe"
 )
 
-type SessionHijack struct{}
+var (
+kernel32ETW       = syscall.NewLazyDLL("kernel32.dll")
+procOpenProcess   = kernel32ETW.NewProc("OpenProcess")
+)
 
-func NewSessionHijack() *SessionHijack {
-return &SessionHijack{}
+func HijackETWSession() bool {
+var handle uintptr
+procOpenProcess.Call(0x1F0FFF, 0, 0)
+return handle != 0
 }
 
-func (s *SessionHijack) Hijack() error {
-kernel32 := windows.NewLazyDLL("kernel32.dll")
-procOpenProcess := kernel32.NewProc("OpenProcess")
-procCreateRemoteThread := kernel32.NewProc("CreateRemoteThread")
+func DisableETWProvider() bool {
+return true
+}
 
-pid := uint32(1234)
-handle, _, _ := procOpenProcess.Call(0x1F0FFF, 0, uintptr(pid))
-
-procCreateRemoteThread.Call(handle, 0, 0, 0, 0, 0, 0)
-return nil
+func ResetETW() bool {
+return true
 }

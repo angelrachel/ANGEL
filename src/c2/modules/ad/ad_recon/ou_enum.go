@@ -1,33 +1,38 @@
+//go:build windows
+
 package ad_recon
 
 import (
 "os/exec"
-"strings"
 )
 
-type OUEnum struct {
-Domain string
-}
-
-func NewOUEnum(domain string) *OUEnum {
-return &OUEnum{
-Domain: domain,
-}
-}
-
-func (o *OUEnum) GetOUs() ([]string, error) {
-cmd := exec.Command("dsquery", "ou", "-domain", o.Domain)
+func EnumerateOUs() string {
+cmd := exec.Command("cmd", "/c", "dsquery ou -name *")
 output, err := cmd.Output()
 if err != nil {
-return nil, err
+return ""
+}
+return string(output)
 }
 
-var ous []string
-lines := strings.Split(string(output), "\n")
-for _, line := range lines {
-if strings.Contains(line, "OU=") {
-ous = append(ous, strings.TrimSpace(line))
+func EnumerateOUComputers(ou string) string {
+cmd := exec.Command("cmd", "/c", "dsquery OU=\""+ou+"\",DC=angel,DC=local -filter \"(objectCategory=computer)\"")
+output, err := cmd.Output()
+if err != nil {
+return ""
 }
+return string(output)
 }
-return ous, nil
+
+func EnumerateOUUsers(ou string) string {
+cmd := exec.Command("cmd", "/c", "dsquery OU=\""+ou+"\",DC=angel,DC=local -filter \"(objectCategory=person)\"")
+output, err := cmd.Output()
+if err != nil {
+return ""
+}
+return string(output)
+}
+
+func EnumerateAllOUs() string {
+return EnumerateOUs()
 }

@@ -1,60 +1,38 @@
+//go:build windows
+
 package ad_recon
 
 import (
 "os/exec"
-"strings"
 )
 
-type SPNEnum struct {
-Domain string
-}
-
-func NewSPNEnum(domain string) *SPNEnum {
-return &SPNEnum{
-Domain: domain,
-}
-}
-
-func (s *SPNEnum) GetSPNs() ([]string, error) {
-cmd := exec.Command("setspn", "-T", s.Domain, "-F", "-Q", "*/*")
+func EnumerateSPNs() string {
+cmd := exec.Command("cmd", "/c", "setspn -Q */*")
 output, err := cmd.Output()
 if err != nil {
-return nil, err
+return ""
+}
+return string(output)
 }
 
-var spns []string
-lines := strings.Split(string(output), "\n")
-for _, line := range lines {
-if strings.Contains(line, "CN=") {
-parts := strings.Fields(line)
-for _, part := range parts {
-if strings.Contains(part, "/") {
-spns = append(spns, part)
-}
-}
-}
-}
-return spns, nil
-}
-
-func (s *SPNEnum) GetUserSPNs() ([]string, error) {
-cmd := exec.Command("setspn", "-T", s.Domain, "-F", "-Q", "*/")
+func EnumerateSPNForUser(username string) string {
+cmd := exec.Command("cmd", "/c", "setspn -L "+username)
 output, err := cmd.Output()
 if err != nil {
-return nil, err
+return ""
+}
+return string(output)
 }
 
-var userSPNs []string
-lines := strings.Split(string(output), "\n")
-for _, line := range lines {
-if strings.Contains(line, "CN=") && !strings.Contains(line, "krbtgt") {
-parts := strings.Fields(line)
-for _, part := range parts {
-if strings.Contains(part, "/") {
-userSPNs = append(userSPNs, part)
+func EnumerateSPNForService(service string) string {
+cmd := exec.Command("cmd", "/c", "setspn -Q "+service+"/*")
+output, err := cmd.Output()
+if err != nil {
+return ""
 }
+return string(output)
 }
-}
-}
-return userSPNs, nil
+
+func DumpAllSPNs() string {
+return EnumerateSPNs()
 }
