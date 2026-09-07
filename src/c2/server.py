@@ -7,6 +7,7 @@ import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, ClassVar, cast
+from urllib.parse import parse_qs, urlparse
 
 from ..auth import AuthError, authenticate
 from ..evidence.chain import redact
@@ -50,10 +51,11 @@ class C2Handler(BaseHTTPRequestHandler):
         return parsed
 
     def do_GET(self) -> None:  # noqa: N802
-        if self.path == "/healthz":
+        parsed = urlparse(self.path)
+        if parsed.path == "/healthz":
             self._json(200, {"status": "ok"})
             return
-        if self.path == "/readyz":
+        if parsed.path == "/readyz":
             try:
                 self.store.get_agent("")
             except Exception:
@@ -64,32 +66,44 @@ class C2Handler(BaseHTTPRequestHandler):
         if not self._authorized():
             self._json(401, {"error": "unauthorized"})
             return
-        if self.path == "/capabilities":
+        if parsed.path == "/capabilities":
             self._json(200, {"service": "angel-c2", "protocol": 1})
+            return
+        if parsed.path == "/agents":
+            self._json(200, {"agents": [agent.__dict__ for agent in self.store.list_agents()]})
+            return
+        if parsed.path == "/tasks":
+            agent_values = parse_qs(parsed.query).get("agent_id", [])
+            agent_id = agent_values[0] if agent_values else None
+            self._json(200, {"tasks": [task.__dict__ for task in self.store.list_tasks(agent_id)]})
             return
         self._json(404, {"error": "not found"})
 
     def do_POST(self) -> None:  # noqa: N802
+        parsed_path = urlparse(self.path).path
         bearer_paths = {"/scope", "/evidence", "/report"}
         has_bearer = self.headers.get("Authorization", "").startswith("Bearer ")
         if (
             not self._authorized()
-            and self.path not in {"/register", "/healthz"}
-            and not (self.path in bearer_paths and has_bearer)
+            and parsed_path not in {"/register", "/heartbeat", "/healthz"}
+            and not (parsed_path in bearer_paths and has_bearer)
         ):
             self._json(401, {"error": "unauthorized"})
             return
+        if parsed_path in {"/register", "/heartbeat"} and not self._authorized():
+            self._json(401, {"error": "operator key required"})
+            return
         try:
             data = self._body()
-            if self.path in {"/register", "/heartbeat"}:
+            if parsed_path in {"/register", "/heartbeat"}:
                 required = ("agent_id", "hostname", "os", "arch")
                 if any(not isinstance(data.get(key), str) or not data[key] for key in required):
                     raise ValueError("missing agent registration field")
                 agent = self.store.upsert_agent(data["agent_id"], data["hostname"], data["os"], data["arch"])
-                status = "registered" if self.path == "/register" else "heartbeat_ack"
+                status = "registered" if parsed_path == "/register" else "heartbeat_ack"
                 self._json(200, {"status": status, "agent_id": agent.id, "last_seen": agent.last_seen})
                 return
-            if self.path == "/task/queue":
+            if parsed_path == "/task/queue":
                 agent_id = data.get("agent_id")
                 task_type = data.get("task_type")
                 payload = data.get("payload", {})
@@ -102,7 +116,7 @@ class C2Handler(BaseHTTPRequestHandler):
                 queued_task = self.store.enqueue_task(agent_id, task_type, payload)
                 self._json(202, {"task_id": queued_task.id, "status": queued_task.status})
                 return
-            if self.path == "/task/claim":
+            if parsed_path == "/task/claim":
                 agent_id = data.get("agent_id")
                 if not isinstance(agent_id, str) or self.store.get_agent(agent_id) is None:
                     self._json(404, {"error": "agent not found"})
@@ -121,14 +135,14 @@ class C2Handler(BaseHTTPRequestHandler):
                     },
                 )
                 return
-            if self.path == "/result":
+            if parsed_path == "/result":
                 task_id, agent_id, payload = data.get("task_id"), data.get("agent_id"), data.get("payload")
                 if not isinstance(task_id, int) or not isinstance(agent_id, str) or not isinstance(payload, dict):
                     raise ValueError("invalid result fields")
                 self.store.record_result(task_id, agent_id, payload)
                 self._json(201, {"status": "recorded"})
                 return
-            if self.path == "/scope":
+            if parsed_path == "/scope":
                 principal = self._principal()
                 if not principal.can("write"):
                     raise AuthError("write permission required")
@@ -137,7 +151,7 @@ class C2Handler(BaseHTTPRequestHandler):
                 )
                 self._json(201, {"id": scope.id, "name": scope.name, "status": scope.status})
                 return
-            if self.path == "/evidence":
+            if parsed_path == "/evidence":
                 principal = self._principal()
                 if not principal.can("evidence"):
                     raise AuthError("evidence permission required")
@@ -147,7 +161,7 @@ class C2Handler(BaseHTTPRequestHandler):
                 )
                 self._json(201, {"id": evidence.id, "record_hash": evidence.record_hash})
                 return
-            if self.path == "/report":
+            if parsed_path == "/report":
                 principal = self._principal()
                 if not principal.can("report"):
                     raise AuthError("report permission required")

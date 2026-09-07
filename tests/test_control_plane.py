@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import threading
 from pathlib import Path
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 import pytest
@@ -98,13 +99,27 @@ def test_http_lifecycle(tmp_path: Path) -> None:
     with urlopen(base + "/readyz", timeout=2) as response:
         assert json.loads(response.read())["status"] == "ready"
 
+    unauthenticated = Request(
+        base + "/register",
+        data=json.dumps({"agent_id": "unauth", "hostname": "h", "os": "linux", "arch": "amd64"}).encode(),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with pytest.raises(HTTPError) as error:
+        urlopen(unauthenticated, timeout=2)
+    assert error.value.code == 401
+
     registration = {"agent_id": "a1", "hostname": "h", "os": "linux", "arch": "amd64"}
     assert post("/register", registration)["status"] == "registered"
     assert post("/heartbeat", registration)["status"] == "heartbeat_ack"
+    with urlopen(Request(base + "/agents", headers=headers), timeout=2) as response:
+        assert json.loads(response.read())["agents"][0]["id"] == "a1"
     queued = post("/task/queue", {"agent_id": "a1", "task_type": "self_test", "payload": {}})
     task = post("/task/claim", {"agent_id": "a1"})["task"]
     assert task["id"] == queued["task_id"]
     result = post("/result", {"agent_id": "a1", "task_id": task["id"], "payload": {"status": "passed"}})
     assert result["status"] == "recorded"
+    with urlopen(Request(base + "/tasks?agent_id=a1", headers=headers), timeout=2) as response:
+        assert json.loads(response.read())["tasks"][0]["status"] == "completed"
     server.shutdown()
     thread.join(timeout=2)

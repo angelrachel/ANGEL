@@ -107,6 +107,48 @@ class Store:
             row = db.execute("SELECT * FROM agents WHERE id = ?", (agent_id,)).fetchone()
         return None if row is None else Agent(**dict(row))
 
+    def list_agents(self) -> list[Agent]:
+        with self._connect() as db:
+            rows = db.execute("SELECT * FROM agents ORDER BY id").fetchall()
+        return [Agent(**dict(row)) for row in rows]
+
+    def get_task(self, task_id: int) -> Task | None:
+        with self._connect() as db:
+            row = db.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
+        if row is None:
+            return None
+        return Task(
+            row["id"],
+            row["agent_id"],
+            row["task_type"],
+            json.loads(row["payload"]),
+            row["status"],
+            row["created_at"],
+            row["expires_at"],
+        )
+
+    def list_tasks(self, agent_id: str | None = None) -> list[Task]:
+        query = "SELECT * FROM tasks"
+        parameters: tuple[str, ...] = ()
+        if agent_id is not None:
+            query += " WHERE agent_id = ?"
+            parameters = (agent_id,)
+        query += " ORDER BY id DESC"
+        with self._connect() as db:
+            rows = db.execute(query, parameters).fetchall()
+        return [
+            Task(
+                row["id"],
+                row["agent_id"],
+                row["task_type"],
+                json.loads(row["payload"]),
+                row["status"],
+                row["created_at"],
+                row["expires_at"],
+            )
+            for row in rows
+        ]
+
     def enqueue_task(self, agent_id: str, task_type: str, payload: dict[str, Any], ttl: int = 300) -> Task:
         validate_task(task_type, payload)
         now = int(time.time())
