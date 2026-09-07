@@ -8,6 +8,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, ClassVar, cast
 from urllib.parse import parse_qs, urlparse
 
+from ..api_rate_limit import RateLimiter, RateLimitError
 from ..auth import AuthError, authenticate
 from ..config import Settings
 from ..evidence.chain import redact
@@ -76,6 +77,7 @@ class C2Handler(BaseHTTPRequestHandler):
     cipher: ClassVar[SessionCipher]
     replay: ClassVar[ReplayGuard]
     operator_key: ClassVar[str]
+    limiter: ClassVar[RateLimiter]
 
     def _json(self, status: int, payload: dict[str, Any]) -> None:
         body = json.dumps(payload, sort_keys=True).encode()
@@ -104,8 +106,18 @@ class C2Handler(BaseHTTPRequestHandler):
             raise ValueError("request must be a JSON object")
         return parsed
 
+    def _within_rate_limit(self) -> bool:
+        try:
+            self.limiter.check(self.client_address[0])
+        except RateLimitError:
+            self._json(429, {"error": "rate limit exceeded"})
+            return False
+        return True
+
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
+        if not self._within_rate_limit():
+            return
         if parsed.path == "/healthz":
             self._json(200, {"status": "ok"})
             return
@@ -155,6 +167,8 @@ class C2Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         parsed_path = urlparse(self.path).path
+        if not self._within_rate_limit():
+            return
         bearer_paths = {"/scope", "/evidence", "/report"}
         has_bearer = self.headers.get("Authorization", "").startswith("Bearer ")
         if (
@@ -265,6 +279,7 @@ def build_server(host: str = "127.0.0.1", port: int = 8000, database: str = "c2.
     handler.cipher = SessionCipher(material)
     handler.replay = ReplayGuard()
     handler.operator_key = key
+    handler.limiter = RateLimiter()
     return ThreadingHTTPServer((host, port), handler)
 
 
