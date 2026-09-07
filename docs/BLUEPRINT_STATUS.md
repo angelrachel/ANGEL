@@ -1,29 +1,51 @@
-# Blueprint Status Matrix
+# ANGEL Blueprint Status Matrix
 
-This matrix records what is implemented in the repository and what remains intentionally outside the safe control-plane scope.
+This matrix tracks the implementation status of the **ANGEL authorized red-team attack platform** against the supplied pure-attack blueprint. It is an engineering status document, not a claim that every listed capability is complete or production-ready.
 
-| Blueprint section | Status | Notes |
-|---|---|---|
-| Architecture overview | Implemented | Python control plane, SQLite state, event stream, authenticated HTTP API |
-| C2 framework | Safe foundation only | Synthetic agent registration, task queue, encrypted envelopes, replay protection, and allowlisted simulator tasks |
-| Decoy/deception layer | Not implemented | Deception and traffic mimicry are not required for the defensive control plane |
-| SQL/NoSQL injection | Defensive review only | Schema and API contract review; no exploit or exfiltration engine |
-| Database post-exploitation | Not implemented | Owner-only decision requiring a separately authorized lab |
-| Evasion and stealth | Not implemented | No EDR bypass, anti-analysis, process injection, or log clearing |
-| Kerberos/Active Directory attacks | Not implemented | Passive inventory may be added; ticket abuse and credential extraction remain excluded |
-| Lateral movement | Not implemented | No SMB/WMI/WinRM execution or tunneling |
-| Persistence | Not implemented | No registry, scheduled-task, service, cron, UEFI, or Android persistence |
-| Hardware rootkit | Not implemented | Explicitly excluded |
-| Credential theft | Not implemented | Explicitly excluded |
-| Collector/infostealer | Not implemented | No keylogging, browser theft, screen capture, webcam, or Wi-Fi extraction |
-| Destruction and impact | Not implemented | No wiper, ransomware, sabotage, or destructive actions |
-| Orchestrator | Implemented safely | Bounded workflows, approvals, replay, cancellation, circuit breaker, and MCP policy |
-| Autonomous decision-making | Safe deterministic controls only | No autonomous offensive action selection |
-| Infrastructure | Implemented and hardened | Terraform, Ansible, Docker, Nginx, local binding, non-root, read-only runtime |
-| OSINT and reconnaissance | Implemented passively | Scope-aware inventory, certificate metadata, response fingerprinting, passive sources |
-| Exploitation | Defensive validation only | BOLA canary checks and schema drift analysis; no arbitrary exploit delivery |
-| Forensic evidence | Implemented | Redaction, hash chain, backup integrity, manifest verification |
-| Reporting | Implemented | Technical findings, executive summary, Markdown/JSON export, passive finding adapters |
-| Cleanup and deletion | Safe lifecycle only | Credential rotation and approved lab cleanup remain owner procedures; forensic concealment is excluded |
+Status meanings:
 
-The owner must provide written authorization, target inventory, retention rules, production secrets, infrastructure approval, and human review before any future active assessment module is considered.
+- **Foundation:** supporting infrastructure or control-plane primitives exist.
+- **Partial:** some source modules exist, but coverage, integration, or platform support is incomplete.
+- **Skeleton:** files or interfaces exist, but substantial implementation and validation remain.
+- **Planned/gap:** the blueprint area is absent, materially incomplete, or not demonstrated in the current repository.
+
+| Blueprint section | Repository area | Status | Audit note |
+|---|---|---|---|
+| Architecture overview | `src/`, `src/c2/`, `src/orchestrator/`, `deploy/` | Foundation/Partial | Multiple runtimes and deployment layers exist; the complete six-layer target architecture is not yet demonstrated end-to-end. |
+| C2 framework | `src/c2/`, `src/c2/implant/`, `src/c2/server/` | Partial | Core server, agent, task/result flow, and module directories exist; the 98+ agent target, complete listener set, profile system, and production hardening require verification. |
+| Malleable C2 profile | `src/c2/` and related module paths | Planned/gap | The full Teams, Office365, Google, custom profile loader and integrated traffic behavior described in the blueprint are not demonstrated as complete. |
+| SMB beacon | `src/c2/modules/lateral/smb_beacon/` | Skeleton/Partial | Named-pipe and peer-to-peer files exist; integration, protocol correctness, and cross-host validation remain incomplete. |
+| Decoy/deception layer | `src/c2/server/decoy/`, `deploy/nginx/` | Partial | Decoy page and reverse-proxy configuration exist; route selection, header validation, and deployment integration require verification. |
+| SQL injection engine | `src/sqli/`, `src/c2/modules/` | Partial | Some SQL/auth-bypass source exists; full detector, DBMS exploit, OOB, target parser, and reporting coverage is not demonstrated. |
+| NoSQL injection engine | `src/c2/modules/exploitation/nosqli/` | Partial/Skeleton | Several NoSQL-related files exist; the complete MongoDB, Elasticsearch, CouchDB, Redis, and Cassandra coverage is not demonstrated. |
+| Database post-exploitation | `src/c2/modules/post_exploitation/database/` | Skeleton/Partial | DBMS-specific files exist, but many are short or placeholder-like and require implementation, tests, and integration. |
+| C2 evasion and stealth | `src/c2/modules/evasion/`, `src/c2/modules/network_evasion/` | Skeleton/Partial | Syscall, sleep masking, anti-analysis, process injection, log cleanup, and network-evasion paths exist; completeness and platform correctness are unverified. |
+| Kerberos and Active Directory | `src/c2/modules/ad/` | Skeleton/Partial | Kerberos, AD reconnaissance, and AD exploit directories exist; the Golden/Silver Ticket, ADCS, DCSync, and persistence coverage is not proven complete. |
+| Lateral movement | `src/c2/modules/lateral/` | Skeleton/Partial | SMB, WMI, WinRM, and pivoting files exist; several files are small skeletons and the blueprint's broader protocol coverage is incomplete. |
+| Persistence | `src/c2/modules/persistence/` | Partial | Windows, Linux, Darwin, and Android paths exist; platform coverage, rollback, testing, and reliable integration remain incomplete. |
+| Hardware rootkit | `src/c2/modules/rootkit/` | Skeleton/Planned | UEFI, SMM, and firmware filenames exist, but real hardware/toolchain validation is not demonstrated. |
+| Credential theft | `src/c2/modules/cred/`, `src/c2/modules/credential/`, `src/c2/modules/cred_crack/` | Partial | Browser, cloud, keychain, shadow/history, and cracking interfaces exist; platform correctness, extraction formats, and integration require verification. |
+| Collector/infostealer | `src/c2/modules/collector/` | Skeleton/Partial | Collector files exist, but screen, keylog, Wi-Fi, webcam, browser, and evidence flows are not demonstrated as complete. |
+| Destruction and impact | `src/c2/modules/destruction/`, `src/c2/modules/destruct_impact/` | Partial | Impact and destruction-related files exist; safe lab controls, recovery validation, and full blueprint coverage remain incomplete. |
+| Orchestrator | `src/orchestrator/`, `src/c2/orchestrator/` | Partial | Workflow, replay, policy, cancellation, AI-routing, attack-graph, and fireteam-related files exist; end-to-end orchestration is not proven. |
+| Autonomous decision-making | `src/c2/modules/brain/`, `src/c2/orchestrator/` | Skeleton/Partial | Decision, risk, behavior, and timing files exist; autonomous learning and auditable decision loops require implementation and validation. |
+| Infrastructure | `deploy/terraform/`, `deploy/ansible/`, `deploy/nginx/`, `Dockerfile`, `docker-compose.yml` | Foundation/Partial | Infrastructure baseline exists; referenced playbooks/inventories, functional separation, certificate handling, and reproducible deployment require verification. |
+| OSINT and reconnaissance | `src/osint/`, `src/c2/osint/` | Partial | Passive inventory and several reconnaissance modules exist; the blueprint's full DNS, port, web, person, company, and cloud coverage is incomplete. |
+| Exploitation | `src/exploit/`, `src/c2/modules/exploitation/` | Partial/Skeleton | Exploitation categories and module paths exist; XSS, SSRF, RCE, LFI/RFI, GraphQL/API, and CVE coverage is not demonstrated end-to-end. |
+| Forensic evidence | `src/evidence/`, `src/c2/evidence/` | Foundation/Partial | Hash chain, normalization, redaction, backup, and manifest foundations exist; signature, encrypted storage, independent verification, and full collector integration require validation. |
+| Reporting | `src/report/`, `src/reporting.py`, `src/c2/reporting/`, `src/c2/report_gen/` | Partial | Technical/executive reporting and Markdown/JSON support exist; PDF, encrypted delivery, metrics, timeline, and remediation coverage remain incomplete. |
+| Cleanup and deletion | `src/cleanup/`, `src/c2/modules/cleanup/` | Partial/Skeleton | Cleanup interfaces exist; credential revocation, token rotation, artifact handling, database cleanup, cache verification, and deletion manifest behavior require implementation and tests. |
+
+## Repository-level blockers
+
+The current repository still contains generated executables and a local database alongside source code. Build provenance, toolchain pinning, and clean artifact policy must be resolved before release packaging.
+
+Several modules contain placeholder comments, short skeleton implementations, or behavior that does not match the function name. A file's presence in the tree must not be treated as proof that the corresponding blueprint capability is operational.
+
+The project documentation and deployment references must remain synchronized with this matrix. When a module changes state, update this document, the relevant README section, tests, and release notes together.
+
+## Verification policy
+
+A domain may be marked **implemented** only when its source path, integration path, tests, platform assumptions, error handling, authorization boundary, and deployment behavior have been reviewed. Until then, use **foundation**, **partial**, **skeleton**, or **planned/gap** as appropriate.
+
+All testing must occur within an explicitly authorized and isolated engagement scope. This status document does not itself authorize execution against any target.
