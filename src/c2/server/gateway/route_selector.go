@@ -4,7 +4,7 @@ import (
 "net/http"
 "strings"
 
-"./decoy"
+"ANGEL/src/c2/server/decoy"
 )
 
 type VisitorType int
@@ -34,13 +34,10 @@ vt := DetermineVisitorType(r)
 
 switch vt {
 case VisitorAgent:
-// Agent request → handle by C2 (langsung forward ke handler yg ada)
 return
 case VisitorOperator:
-// Operator request → handle by dashboard (nanti)
 return
 case VisitorScanner, VisitorUnknown:
-// Scanner atau visitor tanpa header → decoy page
 decoy.ServeDecoy(w, r)
 }
 }
