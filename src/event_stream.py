@@ -30,11 +30,24 @@ class EventStream:
             self._items.append(item)
             return item
 
-    def since(self, cursor: int = 0, limit: int = 100) -> list[StreamItem]:
+    def since(
+        self,
+        cursor: int = 0,
+        limit: int = 100,
+        *,
+        name: str | None = None,
+        actor: str | None = None,
+    ) -> list[StreamItem]:
         if cursor < 0 or not 1 <= limit <= 500:
             raise ValueError("invalid stream cursor or limit")
         with self._lock:
-            return [item for item in self._items if item.cursor > cursor][:limit]
+            return [
+                item
+                for item in self._items
+                if item.cursor > cursor
+                and (name is None or item.event.name == name)
+                and (actor is None or item.event.actor == actor)
+            ][:limit]
 
     @property
     def latest_cursor(self) -> int:

@@ -187,7 +187,12 @@ class C2Handler(BaseHTTPRequestHandler):
             try:
                 cursor = int(query.get("cursor", ["0"])[0])
                 limit = int(query.get("limit", ["100"])[0])
-                items = self.stream.since(cursor, limit)
+                items = self.stream.since(
+                    cursor,
+                    limit,
+                    name=query.get("name", [None])[0],
+                    actor=query.get("actor", [None])[0],
+                )
             except ValueError as exc:
                 self._json(400, {"error": str(exc)})
                 return

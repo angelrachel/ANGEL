@@ -12,3 +12,5 @@ def test_event_stream_cursor_and_retention() -> None:
     assert stream.latest_cursor == 3
     assert [item.cursor for item in stream.since(0)] == [2, 3]
     assert [item.event.name for item in stream.since(2)] == ["three"]
+    assert [item.event.name for item in stream.since(0, name="two")] == ["two"]
+    assert stream.since(0, actor="missing") == []
