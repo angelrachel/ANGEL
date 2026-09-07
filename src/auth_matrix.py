@@ -52,6 +52,23 @@ class MatrixFinding:
 Observe = Callable[[MatrixCase], MatrixObservation]
 
 
+def validate_matrix(cases: list[MatrixCase]) -> None:
+    if not cases:
+        raise ValueError("authorization matrix cannot be empty")
+    seen: set[tuple[str, str, str]] = set()
+    for case in cases:
+        if case.expected not in {"allow", "deny"}:
+            raise ValueError("matrix expected value must be allow or deny")
+        if case.operation not in {"read", "write", "delete"}:
+            raise ValueError("unsupported matrix operation")
+        if not case.actor.name.strip() or not case.resource.name.strip():
+            raise ValueError("matrix actor and resource names are required")
+        key = (case.actor.name, case.resource.name, case.operation)
+        if key in seen:
+            raise ValueError("duplicate authorization matrix case")
+        seen.add(key)
+
+
 def build_matrix(
     actors: list[MatrixActor],
     resources: list[MatrixResource],
@@ -67,6 +84,7 @@ def build_matrix(
 
 
 def evaluate_matrix(cases: list[MatrixCase], observe: Observe) -> list[MatrixFinding]:
+    validate_matrix(cases)
     findings: list[MatrixFinding] = []
     for case in cases:
         observation = observe(case)
@@ -105,4 +123,5 @@ __all__ = [
     "MatrixResource",
     "build_matrix",
     "evaluate_matrix",
+    "validate_matrix",
 ]

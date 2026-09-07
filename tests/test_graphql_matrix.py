@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from src.auth_matrix import MatrixActor, MatrixObservation, MatrixResource, build_matrix, evaluate_matrix
+import pytest
+
+from src.auth_matrix import MatrixActor, MatrixCase, MatrixObservation, MatrixResource, build_matrix, evaluate_matrix
 from src.graphql_intel import compare_schema, inventory_operation, inventory_schema
 from src.graphql_matrix_adapter import graphql_drift_to_finding, matrix_to_finding
 
@@ -55,3 +57,11 @@ def test_authorization_matrix_evaluation() -> None:
     findings = evaluate_matrix(cases, observe)
     assert len(findings) == 2
     assert matrix_to_finding(findings[0]).confidence == "high"
+
+
+def test_authorization_matrix_validation() -> None:
+    case = MatrixCase(MatrixActor("a", "t", "member"), MatrixResource("r", "t", "m"), "read", "allow")
+    with pytest.raises(ValueError, match="duplicate"):
+        evaluate_matrix([case, case], lambda _: MatrixObservation(200))
+    with pytest.raises(ValueError, match="empty"):
+        evaluate_matrix([], lambda _: MatrixObservation(200))
