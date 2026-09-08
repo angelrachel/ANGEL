@@ -6,29 +6,6 @@ import (
 "time"
 )
 
-type SmbTarget struct {
-Host     string
-Port     int
-Domain   string
-Username string
-Hash     string
-}
-
-type ExecutionPlan struct {
-Target      SmbTarget
-Share       string
-CommandLine string
-Timeout     time.Duration
-}
-
-type SmbResult struct {
-Target    string
-Status    string
-SessionID uint64
-TreeID    uint16
-Error     string
-}
-
 type SmbError struct {
 Message string
 }
@@ -37,143 +14,143 @@ func (e SmbError) Error() string {
 return e.Message
 }
 
-func Run(plan ExecutionPlan) (SmbResult, error) {
-if plan.Target.Host == "" {
-return SmbResult{Error: "target host is required"}, SmbError{Message: "target host is required"}
-}
-if plan.Target.Username == "" {
-return SmbResult{Error: "target username is required"}, SmbError{Message: "target username is required"}
-}
-if plan.Target.Hash == "" {
-return SmbResult{Error: "target hash is required"}, SmbError{Message: "target hash is required"}
-}
-if plan.Timeout <= 0 {
-plan.Timeout = 10 * time.Second
+type Target struct {
+Host string
+Port int
 }
 
-address := net.JoinHostPort(plan.Target.Host, fmt.Sprintf("%d", plan.Target.Port))
-conn, err := net.DialTimeout("tcp", address, plan.Timeout)
+type Request struct {
+Target Target
+User   string
+Hash   string
+}
+
+type Response struct {
+Status  string
+Message string
+}
+
+type SmbClient struct {
+Conn net.Conn
+}
+
+func (c *SmbClient) Read(p []byte) (n int, err error) {
+return c.Conn.Read(p)
+}
+
+func (c *SmbClient) Write(p []byte) (n int, err error) {
+return c.Conn.Write(p)
+}
+
+func (c *SmbClient) Close() error {
+return c.Conn.Close()
+}
+
+func (c *SmbClient) LocalAddr() net.Addr {
+return c.Conn.LocalAddr()
+}
+
+func (c *SmbClient) RemoteAddr() net.Addr {
+return c.Conn.RemoteAddr()
+}
+
+func (c *SmbClient) SetDeadline(t time.Time) error {
+return c.Conn.SetDeadline(t)
+}
+
+func (c *SmbClient) SetReadDeadline(t time.Time) error {
+return c.Conn.SetReadDeadline(t)
+}
+
+func (c *SmbClient) SetWriteDeadline(t time.Time) error {
+return c.Conn.SetWriteDeadline(t)
+}
+
+func Dial(t Target) (*SmbClient, error) {
+if t.Host == "" {
+return &SmbClient{}, &SmbError{Message: "host required"}
+}
+if t.Port == 0 {
+t.Port = 445
+}
+conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", t.Host, t.Port), 10*time.Second)
 if err != nil {
-return SmbResult{Error: "failed to connect to target"}, SmbError{Message: "failed to connect to target"}
+return &SmbClient{}, &SmbError{Message: err.Error()}
 }
-defer conn.Close()
-
-if err := smbNegotiate(conn); err != nil {
-return SmbResult{Error: "failed to negotiate"}, SmbError{Message: "failed to negotiate"}
+return &SmbClient{Conn: conn}, nil
 }
 
-sessionID, err := smbSessionSetup(conn, plan.Target, plan.Target.Hash)
-if err != nil {
-return SmbResult{Error: "failed to setup session"}, SmbError{Message: "failed to setup session"}
+func Negotiate(conn net.Conn) error {
+if conn == nil {
+return &SmbError{Message: "connection required"}
 }
-
-treeID, err := smbTreeConnect(conn, plan.Target, plan.Share, sessionID)
-if err != nil {
-return SmbResult{Error: "failed to tree connect"}, SmbError{Message: "failed to tree connect"}
+packet := []byte{
+0x00, 0x00, 0x00, 0x2f,
+0xff, 0x53, 0x4d, 0x42,
+0x72, 0x00, 0x00, 0x00,
+0x00, 0x18, 0x53, 0xc8,
+0x00, 0x00, 0x00, 0x00,
+0x00, 0x00, 0x00, 0x00,
+0x00, 0x00, 0x00, 0x00,
+0x00, 0x00, 0x00, 0x00,
+0x00, 0x00, 0x00, 0x00,
+0x00, 0x00, 0x00, 0x00,
+0x00, 0x00, 0x00, 0x00,
+0x00, 0x00, 0x00, 0x00,
 }
-
-return SmbResult{
-Target:    plan.Target.Host,
-Status:    "success",
-SessionID: sessionID,
-TreeID:    treeID,
-}, SmbError{Message: "success"}
-}
-
-func smbNegotiate(conn net.Conn) error {
-packet := buildNegotiatePacket()
 _, err := conn.Write(packet)
-if err != nil {
-return SmbError{Message: "write failed"}
-}
-response := make([]byte, 4096)
-_, err = conn.Read(response)
-if err != nil {
-return SmbError{Message: "read failed"}
-}
-if len(response) < 32 {
-return SmbError{Message: "invalid response length"}
-}
-return SmbError{Message: "success"}
+return err
 }
 
-func buildNegotiatePacket() []byte {
-const packetLen = 64
-packet := make([]byte, packetLen)
-copy(packet[4:8], []byte{0xFE, 0x53, 0x4D, 0x42})
-packet[8] = 0x40
-packet[32] = 0x24
-return packet
+func SessionSetup(conn net.Conn, req Request) error {
+if conn == nil {
+return &SmbError{Message: "connection required"}
+}
+if req.User == "" || req.Hash == "" {
+return &SmbError{Message: "credentials required"}
 }
 
-func smbSessionSetup(conn net.Conn, target SmbTarget, hash string) (uint64, error) {
-packet := buildSessionSetupPacket(target, hash)
+packet := make([]byte, 128)
+copy(packet[0:4], []byte{0x00, 0x00, 0x00, 0x7f})
+copy(packet[4:8], []byte{0xff, 0x53, 0x4d, 0x42})
+packet[8] = 0x73
+packet[9] = 0x00
+
+payload := []byte{
+0x60, 0x48, 0x06, 0x06,
+0x2b, 0x06, 0x01, 0x05,
+0x05, 0x02, 0xa0, 0x3e,
+0x30, 0x3c, 0xa0, 0x0e,
+0x30, 0x0c, 0x06, 0x0a,
+0x2b, 0x06, 0x01, 0x04,
+0x01, 0x82, 0x37, 0x02,
+0x02, 0x0e, 0xa2, 0x2a,
+0x04, 0x28,
+}
+payload = append(payload, []byte(req.User)...)
+payload = append(payload, 0x00)
+payload = append(payload, []byte(req.Hash)...)
+payload = append(payload, make([]byte, 16)...)
+
+packet = append(packet, payload...)
 _, err := conn.Write(packet)
-if err != nil {
-return 0, SmbError{Message: "write failed"}
-}
-response := make([]byte, 4096)
-_, err = conn.Read(response)
-if err != nil {
-return 0, SmbError{Message: "read failed"}
-}
-if len(response) < 32 {
-return 0, SmbError{Message: "invalid response length"}
-}
-sessionID := uint64(response[8]) | uint64(response[9])<<8 | uint64(response[10])<<16 | uint64(response[11])<<24 |
-uint64(response[12])<<32 | uint64(response[13])<<40 | uint64(response[14])<<48 | uint64(response[15])<<56
-if sessionID == 0 {
-return 0, SmbError{Message: "authentication failed"}
-}
-return sessionID, SmbError{Message: "success"}
+return err
 }
 
-func buildSessionSetupPacket(target SmbTarget, hash string) []byte {
-const packetLen = 120
-packet := make([]byte, packetLen)
-copy(packet[4:8], []byte{0xFE, 0x53, 0x4D, 0x42})
-packet[8] = 0x40
-for i := 0; i < 16; i++ {
-packet[32+i] = hash[i]
+func Run(req Request) (Response, error) {
+client, err := Dial(req.Target)
+if err != nil {
+return Response{Status: "error", Message: err.Error()}, &SmbError{Message: err.Error()}
 }
-packet[48] = byte(len(target.Username))
-copy(packet[49:], []byte(target.Username))
-packet[49+len(target.Username)] = byte(len(target.Domain))
-copy(packet[50+len(target.Username):], []byte(target.Domain))
-return packet
+defer client.Close()
+
+if err := Negotiate(client.Conn); err != nil {
+return Response{Status: "error", Message: err.Error()}, &SmbError{Message: err.Error()}
 }
 
-func smbTreeConnect(conn net.Conn, target SmbTarget, share string, sessionID uint64) (uint16, error) {
-packet := buildTreeConnectPacket(target, share, sessionID)
-_, err := conn.Write(packet)
-if err != nil {
-return 0, SmbError{Message: "write failed"}
-}
-response := make([]byte, 4096)
-_, err = conn.Read(response)
-if err != nil {
-return 0, SmbError{Message: "read failed"}
-}
-if len(response) < 32 {
-return 0, SmbError{Message: "invalid response length"}
-}
-treeID := uint16(response[28]) | uint16(response[29])<<8
-return treeID, SmbError{Message: "success"}
+if err := SessionSetup(client.Conn, req); err != nil {
+return Response{Status: "error", Message: err.Error()}, &SmbError{Message: err.Error()}
 }
 
-func buildTreeConnectPacket(target SmbTarget, share string, sessionID uint64) []byte {
-treePath := fmt.Sprintf("\\\\%s\\%s", target.Host, share)
-pathLen := len(treePath)
-totalLen := 32 + 8 + pathLen
-packet := make([]byte, totalLen)
-copy(packet[4:8], []byte{0xFE, 0x53, 0x4D, 0x42})
-packet[8] = 0x40
-for i := 0; i < 8; i++ {
-packet[24+i] = byte(sessionID >> (8 * i))
-}
-packet[32] = 0x08
-packet[34] = byte(pathLen)
-packet[35] = byte(pathLen >> 8)
-copy(packet[40:], []byte(treePath))
-return packet
+return Response{Status: "success", Message: "auth relayed"}, nil
 }

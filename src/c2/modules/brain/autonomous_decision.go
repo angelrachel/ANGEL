@@ -1,45 +1,33 @@
 package brain
 
-import (
-)
+import "time"
+
+type Decision struct {
+Action    string
+Timestamp string
+}
 
 type AutonomousDecision struct {
-State      map[string]interface{}
-Decisions  []string
-LastAction string
+State map[string]interface{}
 }
 
 func NewAutonomousDecision() *AutonomousDecision {
-return &AutonomousDecision{
-State:     make(map[string]interface{}),
-Decisions: make([]string, 0),
-}
+return &AutonomousDecision{State: make(map[string]interface{})}
 }
 
-func (a *AutonomousDecision) Analyze() string {
-// Analyze current environment and system state
-if val, ok := a.State["suspicious"]; ok && val.(bool) {
-return "stealth"
+func (a *AutonomousDecision) Analyze(environment string) Decision {
+action := "sleep_longer"
+if environment == "safe" {
+action = "continue_operation"
 }
-if val, ok := a.State["has_credentials"]; ok && val.(bool) {
-return "lateral"
-}
-return "recon"
-}
-
-func (a *AutonomousDecision) Decide(analysis string) string {
-switch analysis {
-case "stealth":
-return "sleep_longer"
-case "lateral":
-return "move_lateral"
-default:
-return "scan"
-}
+return Decision{Action: action, Timestamp: time.Now().UTC().Format(time.RFC3339)}
 }
 
 func (a *AutonomousDecision) Execute(action string) string {
-a.LastAction = action
-a.Decisions = append(a.Decisions, action)
+a.State["last_action"] = action
 return "executed: " + action
+}
+
+func (a *AutonomousDecision) SetState(key string, value interface{}) {
+a.State[key] = value
 }

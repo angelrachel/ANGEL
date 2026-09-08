@@ -1,27 +1,13 @@
 package evidence
 
-import (
-"time"
-)
+import "time"
 
-type Timestamp struct {
-Time time.Time
+type TimestampResult struct {
+UTC    string
+Unix   int64
 }
 
-func NewTimestamp() *Timestamp {
-return &Timestamp{
-Time: time.Now().UTC(),
-}
-}
-
-func (t *Timestamp) GetTime() time.Time {
-return t.Time
-}
-
-func (t *Timestamp) GetUnix() int64 {
-return t.Time.Unix()
-}
-
-func (t *Timestamp) GetRFC3339() string {
-return t.Time.Format(time.RFC3339)
+func GetTimestamp() TimestampResult {
+now := time.Now().UTC()
+return TimestampResult{UTC: now.Format(time.RFC3339), Unix: now.Unix()}
 }

@@ -1,84 +1,65 @@
-//go:build windows
-
 package pivoting
 
 import (
+"context"
 "net"
-"sync"
+"strconv"
 "time"
 )
 
-type TCPTunnel struct {
-ListenAddr string
-TargetAddr string
-Dialer     *net.Dialer
+type Tunnel struct {
+LocalPort  int
+RemoteAddr string
 }
 
-func NewTCPTunnel(listenAddr, targetAddr string) *TCPTunnel {
-return &TCPTunnel{
-ListenAddr: listenAddr,
-TargetAddr: targetAddr,
-Dialer:     &net.Dialer{Timeout: 10 * time.Second},
-}
-}
-
-func (t *TCPTunnel) Tunnel(client net.Conn) {
-defer client.Close()
-target, err := t.Dialer.Dial("tcp", t.TargetAddr)
-if err != nil {
-return
-}
-defer target.Close()
-var wg sync.WaitGroup
-wg.Add(2)
-go func() {
-defer wg.Done()
-buffer := make([]byte, 4096)
-for {
-n, err := client.Read(buffer)
-if err != nil {
-return
-}
-if _, err := target.Write(buffer[:n]); err != nil {
-return
-}
-}
-}()
-go func() {
-defer wg.Done()
-buffer := make([]byte, 4096)
-for {
-n, err := target.Read(buffer)
-if err != nil {
-return
-}
-if _, err := client.Write(buffer[:n]); err != nil {
-return
-}
-}
-}()
-wg.Wait()
-}
-
-func (t *TCPTunnel) Start() error {
-listener, err := net.Listen("tcp", t.ListenAddr)
+func (t *Tunnel) Start(ctx context.Context) error {
+listener, err := net.Listen("tcp", ":"+strconv.Itoa(t.LocalPort))
 if err != nil {
 return err
 }
 defer listener.Close()
+
+go func() {
 for {
 conn, err := listener.Accept()
 if err != nil {
 continue
 }
-go t.Tunnel(conn)
+go t.handle(ctx, conn)
+}
+}()
+
+select {
+case <-ctx.Done():
+return listener.Close()
 }
 }
 
-func (t *TCPTunnel) GetListenAddr() string {
-return t.ListenAddr
+func (t *Tunnel) handle(ctx context.Context, client net.Conn) {
+defer client.Close()
+target, err := net.DialTimeout("tcp", t.RemoteAddr, 10*time.Second)
+if err != nil {
+return
 }
+defer target.Close()
 
-func (t *TCPTunnel) GetTargetAddr() string {
-return t.TargetAddr
+go func() {
+buf := make([]byte, 4096)
+for {
+n, err := client.Read(buf)
+if err != nil {
+return
+}
+target.Write(buf[:n])
+}
+}()
+
+buf := make([]byte, 4096)
+for {
+n, err := target.Read(buf)
+if err != nil {
+return
+}
+client.Write(buf[:n])
+}
 }

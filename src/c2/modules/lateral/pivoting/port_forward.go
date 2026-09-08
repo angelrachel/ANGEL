@@ -1,81 +1,65 @@
-//go:build windows
-
 package pivoting
 
 import (
+"context"
 "net"
-"sync"
+"strconv"
 "time"
 )
 
-type PortForward struct {
-ListenAddr string
+type Forwarder struct {
+LocalPort  int
 TargetAddr string
-Client     *net.Dialer
 }
 
-func NewPortForward(listenAddr, targetAddr string) *PortForward {
-return &PortForward{
-ListenAddr: listenAddr,
-TargetAddr: targetAddr,
-Client:     &net.Dialer{Timeout: 10 * time.Second},
-}
-}
-
-func (p *PortForward) Forward(conn net.Conn) {
-defer conn.Close()
-target, err := p.Client.Dial("tcp", p.TargetAddr)
-if err != nil {
-return
-}
-defer target.Close()
-
-var wg sync.WaitGroup
-wg.Add(2)
-
-go func() {
-defer wg.Done()
-buffer := make([]byte, 4096)
-for {
-n, err := conn.Read(buffer)
-if err != nil {
-return
-}
-if _, err := target.Write(buffer[:n]); err != nil {
-return
-}
-}
-}()
-
-go func() {
-defer wg.Done()
-buffer := make([]byte, 4096)
-for {
-n, err := target.Read(buffer)
-if err != nil {
-return
-}
-if _, err := conn.Write(buffer[:n]); err != nil {
-return
-}
-}
-}()
-
-wg.Wait()
-}
-
-func (p *PortForward) Start() error {
-listener, err := net.Listen("tcp", p.ListenAddr)
+func (f *Forwarder) Start(ctx context.Context) error {
+listener, err := net.Listen("tcp", ":"+strconv.Itoa(f.LocalPort))
 if err != nil {
 return err
 }
 defer listener.Close()
 
+go func() {
 for {
 conn, err := listener.Accept()
 if err != nil {
 continue
 }
-go p.Forward(conn)
+go f.handle(ctx, conn)
+}
+}()
+
+select {
+case <-ctx.Done():
+return listener.Close()
+}
+}
+
+func (f *Forwarder) handle(ctx context.Context, client net.Conn) {
+defer client.Close()
+target, err := net.DialTimeout("tcp", f.TargetAddr, 10*time.Second)
+if err != nil {
+return
+}
+defer target.Close()
+
+go func() {
+buf := make([]byte, 4096)
+for {
+n, err := client.Read(buf)
+if err != nil {
+return
+}
+target.Write(buf[:n])
+}
+}()
+
+buf := make([]byte, 4096)
+for {
+n, err := target.Read(buf)
+if err != nil {
+return
+}
+client.Write(buf[:n])
 }
 }

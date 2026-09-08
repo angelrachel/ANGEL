@@ -1,42 +1,25 @@
 package brain
 
-type RiskAssessment struct {
-RiskLevel   string
-Score       int
-Environment string
+type RiskLevel struct {
+Score int
+Level string
 }
 
-func NewRiskAssessment() *RiskAssessment {
-return &RiskAssessment{
-RiskLevel: "unknown",
-Score:     50,
-}
+type RiskAssessor struct {
+Threshold int
 }
 
-func (r *RiskAssessment) Assess(environment string, indicators []string) string {
-score := 0
-for _, indicator := range indicators {
-switch indicator {
-case "edr_present":
-score += 30
-case "av_present":
-score += 10
-case "sandbox":
-score += 40
-case "debugger":
-score += 50
-}
+func NewRiskAssessor(threshold int) *RiskAssessor {
+return &RiskAssessor{Threshold: threshold}
 }
 
-if score > 70 {
-r.RiskLevel = "critical"
-} else if score > 40 {
-r.RiskLevel = "high"
-} else if score > 20 {
-r.RiskLevel = "medium"
-} else {
-r.RiskLevel = "low"
+func (r *RiskAssessor) Assess(score int) RiskLevel {
+if score >= r.Threshold {
+return RiskLevel{Score: score, Level: "high"}
 }
-r.Score = score
-return r.RiskLevel
+return RiskLevel{Score: score, Level: "low"}
+}
+
+func (r *RiskAssessor) SetThreshold(threshold int) {
+r.Threshold = threshold
 }

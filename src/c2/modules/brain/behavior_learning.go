@@ -1,49 +1,38 @@
 package brain
 
+import "time"
+
+type LearningRecord struct {
+Action    string
+Success   bool
+Timestamp string
+}
+
 type BehaviorLearning struct {
-History     []string
-SuccessRate map[string]float64
+History []LearningRecord
 }
 
 func NewBehaviorLearning() *BehaviorLearning {
-return &BehaviorLearning{
-History:     make([]string, 0),
-SuccessRate: make(map[string]float64),
-}
+return &BehaviorLearning{History: []LearningRecord{}}
 }
 
 func (b *BehaviorLearning) Learn(action string, success bool) {
-b.History = append(b.History, action)
-if _, ok := b.SuccessRate[action]; !ok {
-b.SuccessRate[action] = 0.0
-}
-if success {
-b.SuccessRate[action] = b.SuccessRate[action] + 0.1
-} else {
-b.SuccessRate[action] = b.SuccessRate[action] - 0.05
-}
+b.History = append(b.History, LearningRecord{Action: action, Success: success, Timestamp: time.Now().UTC().Format(time.RFC3339)})
 }
 
-func (b *BehaviorLearning) GetBestAction(actions []string) string {
-var bestAction string
-var bestRate float64
-for _, action := range actions {
-if rate, ok := b.SuccessRate[action]; ok && rate > bestRate {
-bestRate = rate
-bestAction = action
+func (b *BehaviorLearning) GetBestAction() string {
+successCount := 0
+for _, record := range b.History {
+if record.Success {
+successCount++
 }
 }
-return bestAction
+if successCount > 0 {
+return "continue_attack_path"
+}
+return "recon_adjust"
 }
 
-func (b *BehaviorLearning) Adapt() map[string]string {
-adaptations := make(map[string]string)
-for action, rate := range b.SuccessRate {
-if rate < 0.3 {
-adaptations[action] = "avoid"
-} else if rate > 0.8 {
-adaptations[action] = "prioritize"
-}
-}
-return adaptations
+func (b *BehaviorLearning) GetHistoryCount() int {
+return len(b.History)
 }

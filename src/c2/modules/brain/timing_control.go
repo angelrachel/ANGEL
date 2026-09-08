@@ -1,61 +1,34 @@
 package brain
 
-import (
-"time"
-)
+import "time"
+
+type TimingConfig struct {
+BaseSleep int
+MaxSleep  int
+}
 
 type TimingControl struct {
-BaseSleep    int
-MaxSleep     int
-CurrentSleep int
-Jitter       int
+Config TimingConfig
 }
 
-func NewTimingControl(baseSleep int) *TimingControl {
-return &TimingControl{
-BaseSleep:    baseSleep,
-MaxSleep:     baseSleep * 3,
-CurrentSleep: baseSleep,
-Jitter:       2,
-}
+func NewTimingControl(baseSleep, maxSleep int) *TimingControl {
+return &TimingControl{Config: TimingConfig{BaseSleep: baseSleep, MaxSleep: maxSleep}}
 }
 
-func (t *TimingControl) CalculateSleep() int {
-sleep := t.CurrentSleep
-// Add jitter
-sleep += t.Jitter * (time.Now().Nanosecond() % 3)
-if sleep > t.MaxSleep {
-sleep = t.MaxSleep
+func (t *TimingControl) Sleep(seconds int) {
+if seconds < 1 {
+seconds = t.Config.BaseSleep
 }
-return sleep
+time.Sleep(time.Duration(seconds) * time.Second)
 }
 
-func (t *TimingControl) Adjust(environment string) {
-switch environment {
-case "suspicious":
-t.CurrentSleep = t.CurrentSleep + 5
-case "safe":
-t.CurrentSleep = t.BaseSleep
-case "sandbox":
-t.CurrentSleep = t.MaxSleep
-}
+func (t *TimingControl) Jitter() int {
+return t.Config.BaseSleep + t.Config.MaxSleep/2
 }
 
-func (t *TimingControl) Sleep() {
-sleep := t.CalculateSleep()
-time.Sleep(time.Duration(sleep) * time.Second)
+func (t *TimingControl) Adjust(environment string) int {
+if environment == "suspicious" {
+return t.Config.MaxSleep
 }
-
-func (t *TimingControl) AdaptiveSleep(indicators []string) {
-suspiciousCount := 0
-for _, indicator := range indicators {
-if indicator == "edr" || indicator == "sandbox" {
-suspiciousCount++
-}
-}
-if suspiciousCount > 0 {
-t.Adjust("suspicious")
-} else {
-t.Adjust("safe")
-}
+return t.Config.BaseSleep
 }
