@@ -1,6 +1,8 @@
 package winrm
 
-import "os/exec"
+import (
+"os/exec"
+)
 
 type ExecResult struct {
 Command string

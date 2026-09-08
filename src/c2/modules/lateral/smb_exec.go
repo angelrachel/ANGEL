@@ -1,9 +1,8 @@
-package smb
+package lateral
 
 import (
-"context"
+"fmt"
 "os/exec"
-"time"
 )
 
 type ExecResult struct {
@@ -30,10 +29,6 @@ out, _ := cmd.Output()
 return ExecResult{Command: "net_use", Output: string(out), Status: "success"}
 }
 
-func (e Execute) RunPsExecWithTimeout(command string, timeout time.Duration) ExecResult {
-ctx, cancel := context.WithTimeout(context.Background(), timeout)
-defer cancel()
-cmd := exec.CommandContext(ctx, "psexec.exe", "\\\\"+e.Host, "-u", e.User, "-p", e.Pass, command)
-out, _ := cmd.Output()
-return ExecResult{Command: command, Output: string(out), Status: "success"}
+func FormatSmbPath(host, path string) string {
+return fmt.Sprintf("\\\\%s\\%s", host, path)
 }

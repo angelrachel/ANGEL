@@ -1,32 +1,41 @@
-//go:build windows
-
 package evasion
 
 import (
-"syscall"
-"unsafe"
+"os"
+"runtime"
+"strconv"
 )
 
-var (
-kernel32Memory = syscall.NewLazyDLL("kernel32.dll")
-)
-
-func CheckMemorySize() uint32 {
-return 0
+type MemoryResult struct {
+Memory  int
+CPU     int
+Status  string
 }
 
-func CheckMemoryProtection() uint32 {
-return 0
+func CheckSystemMemory() MemoryResult {
+var m runtime.MemStats
+runtime.ReadMemStats(&m)
+result := MemoryResult{Memory: int(m.Sys / 1024 / 1024), CPU: runtime.NumCPU()}
+if m.Sys < 1024*1024*1024 {
+result.Status = "low_memory"
+} else {
+result.Status = "sufficient"
+}
+return result
 }
 
-func IsMemoryExecutable() bool {
-return true
+func CheckDiskSize() MemoryResult {
+info, err := os.Stat("/")
+if err != nil {
+return MemoryResult{Status: "error"}
+}
+return MemoryResult{Memory: int(info.Size() / 1024 / 1024 / 1024), Status: "disk_size"}
 }
 
-func CheckProcessMemory() bool {
-return true
+func CheckCoreCount() MemoryResult {
+return MemoryResult{CPU: runtime.NumCPU(), Status: "core_count"}
 }
 
-func DumpProcessMemory() bool {
-return true
+func FormatMemory(size int) string {
+return strconv.Itoa(size) + " MB"
 }
