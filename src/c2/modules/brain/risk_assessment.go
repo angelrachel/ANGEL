@@ -1,5 +1,7 @@
 package brain
 
+import "time"
+
 type RiskLevel struct {
 Score int
 Level string
@@ -22,4 +24,8 @@ return RiskLevel{Score: score, Level: "low"}
 
 func (r *RiskAssessor) SetThreshold(threshold int) {
 r.Threshold = threshold
+}
+
+func (r *RiskAssessor) GetTimestamp() string {
+return time.Now().UTC().Format(time.RFC3339)
 }
