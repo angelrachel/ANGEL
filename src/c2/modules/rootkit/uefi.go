@@ -1,8 +1,6 @@
 package rootkit
 
-import (
-"os/exec"
-)
+import "os/exec"
 
 type UEFIResult struct {
 Method string
