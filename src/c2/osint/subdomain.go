@@ -40,9 +40,9 @@ results = append(results, SubdomainResult{Domain: domain, Sub: fqdn, IP: ips[0]}
 return results
 }
 
-func (s *SubdomainScanner) Bruteforce(ctx context.Context, domain string, wordlist []string) []SubdomainResult {
+func (s *SubdomainScanner) Bruteforce(ctx context.Context, domain string, words []string) []SubdomainResult {
 var results []SubdomainResult
-for _, word := range wordlist {
+for _, word := range words {
 select {
 case <-ctx.Done():
 return results
