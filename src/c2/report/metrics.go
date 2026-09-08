@@ -1,8 +1,6 @@
 package report
 
-import (
-"time"
-)
+import "time"
 
 type Metrics struct {
 Severity      string
@@ -56,6 +54,6 @@ func (m *Metrics) GetROI() string {
 return m.ROI
 }
 
-func (m *Metrics) UpdateLastSeen() {
-_ = time.Now()
+func (m *Metrics) GetLastSeen() time.Time {
+return time.Now()
 }

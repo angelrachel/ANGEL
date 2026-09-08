@@ -5,50 +5,32 @@ package credential
 import (
 "os"
 "strings"
-"syscall"
 )
 
-type ShadowDump struct {
-Path string
-}
-
-func NewShadowDump(path string) *ShadowDump {
-return &ShadowDump{Path: path}
-}
-
-func (s *ShadowDump) ReadShadow() ([]byte, error) {
-file, err := os.Open(s.Path)
+func ReadShadow() string {
+data, err := os.ReadFile("/etc/shadow")
 if err != nil {
-return nil, err
+return ""
 }
-defer file.Close()
-buf := make([]byte, 4096)
-n, err := file.Read(buf)
-if err != nil {
-return nil, err
-}
-return buf[:n], nil
+return string(data)
 }
 
-func (s *ShadowDump) IsReadable() bool {
-var stat syscall.Stat_t
-if err := syscall.Stat(s.Path, &stat); err != nil {
-return false
+func ReadPasswd() string {
+data, err := os.ReadFile("/etc/passwd")
+if err != nil {
+return ""
 }
-return stat.Mode&syscall.S_IRUSR != 0
+return string(data)
 }
 
-func (s *ShadowDump) DumpAllHashes() ([]string, error) {
-content, err := s.ReadShadow()
-if err != nil {
-return nil, err
-}
+func ExtractHashes() string {
+shadow := ReadShadow()
+lines := strings.Split(shadow, "\n")
 var hashes []string
-lines := strings.Split(string(content), "\n")
 for _, line := range lines {
 if strings.Contains(line, ":") {
 hashes = append(hashes, line)
 }
 }
-return hashes, nil
+return strings.Join(hashes, "\n")
 }

@@ -16,54 +16,32 @@ Client: &http.Client{Timeout: 5 * time.Second},
 }
 }
 
-func (a *AWSMetadata) GetInstanceID() (string, error) {
+func (a *AWSMetadata) GetInstanceID() string {
 resp, err := a.Client.Get("http://169.254.169.254/latest/meta-data/instance-id")
 if err != nil {
-return "", err
+return ""
 }
 defer resp.Body.Close()
-body, err := io.ReadAll(resp.Body)
-if err != nil {
-return "", err
-}
-return string(body), nil
+body, _ := io.ReadAll(resp.Body)
+return string(body)
 }
 
-func (a *AWSMetadata) GetIAMRole() (string, error) {
+func (a *AWSMetadata) GetIAMRole() string {
 resp, err := a.Client.Get("http://169.254.169.254/latest/meta-data/iam/security-credentials/")
 if err != nil {
-return "", err
+return ""
 }
 defer resp.Body.Close()
-body, err := io.ReadAll(resp.Body)
-if err != nil {
-return "", err
-}
-return string(body), nil
+body, _ := io.ReadAll(resp.Body)
+return string(body)
 }
 
-func (a *AWSMetadata) GetCredentials(role string) (string, error) {
+func (a *AWSMetadata) GetCredentials(role string) string {
 resp, err := a.Client.Get("http://169.254.169.254/latest/meta-data/iam/security-credentials/" + role)
 if err != nil {
-return "", err
+return ""
 }
 defer resp.Body.Close()
-body, err := io.ReadAll(resp.Body)
-if err != nil {
-return "", err
-}
-return string(body), nil
-}
-
-func (a *AWSMetadata) GetUserData() (string, error) {
-resp, err := a.Client.Get("http://169.254.169.254/latest/user-data")
-if err != nil {
-return "", err
-}
-defer resp.Body.Close()
-body, err := io.ReadAll(resp.Body)
-if err != nil {
-return "", err
-}
-return string(body), nil
+body, _ := io.ReadAll(resp.Body)
+return string(body)
 }

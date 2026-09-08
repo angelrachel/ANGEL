@@ -14,7 +14,7 @@ Time: time.Now().UTC(),
 }
 }
 
-func (t *Timestamp) GetTimestamp() time.Time {
+func (t *Timestamp) GetTime() time.Time {
 return t.Time
 }
 
@@ -22,6 +22,6 @@ func (t *Timestamp) GetUnix() int64 {
 return t.Time.Unix()
 }
 
-func (t *Timestamp) GetString() string {
+func (t *Timestamp) GetRFC3339() string {
 return t.Time.Format(time.RFC3339)
 }

@@ -19,7 +19,3 @@ return p.ParentID
 func (p *ParentChild) GetChildID() string {
 return p.ChildID
 }
-
-func (p *ParentChild) IsValid() bool {
-return p.ParentID != "" && p.ChildID != ""
-}

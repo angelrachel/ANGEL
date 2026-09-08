@@ -1,8 +1,6 @@
 package report
 
-import (
-"time"
-)
+import "time"
 
 type Impact struct {
 Severity        string

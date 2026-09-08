@@ -11,52 +11,56 @@ import (
 type SOCKS5Proxy struct {
 ListenAddr string
 TargetAddr string
-Dialer     *net.Dialer
+Client     *net.Dialer
 }
 
 func NewSOCKS5Proxy(listenAddr, targetAddr string) *SOCKS5Proxy {
 return &SOCKS5Proxy{
 ListenAddr: listenAddr,
 TargetAddr: targetAddr,
-Dialer:     &net.Dialer{Timeout: 10 * time.Second},
+Client:     &net.Dialer{Timeout: 10 * time.Second},
 }
 }
 
-func (p *SOCKS5Proxy) HandleClient(client net.Conn) {
-defer client.Close()
-remote, err := p.Dialer.Dial("tcp", p.TargetAddr)
+func (p *SOCKS5Proxy) HandleClient(conn net.Conn) {
+defer conn.Close()
+target, err := p.Client.Dial("tcp", p.TargetAddr)
 if err != nil {
 return
 }
-defer remote.Close()
+defer target.Close()
+
 var wg sync.WaitGroup
 wg.Add(2)
+
 go func() {
 defer wg.Done()
 buffer := make([]byte, 4096)
 for {
-n, err := client.Read(buffer)
+n, err := conn.Read(buffer)
 if err != nil {
 return
 }
-if _, err := remote.Write(buffer[:n]); err != nil {
+if _, err := target.Write(buffer[:n]); err != nil {
 return
 }
 }
 }()
+
 go func() {
 defer wg.Done()
 buffer := make([]byte, 4096)
 for {
-n, err := remote.Read(buffer)
+n, err := target.Read(buffer)
 if err != nil {
 return
 }
-if _, err := client.Write(buffer[:n]); err != nil {
+if _, err := conn.Write(buffer[:n]); err != nil {
 return
 }
 }
 }()
+
 wg.Wait()
 }
 
@@ -66,6 +70,7 @@ if err != nil {
 return err
 }
 defer listener.Close()
+
 for {
 conn, err := listener.Accept()
 if err != nil {
@@ -73,12 +78,4 @@ continue
 }
 go p.HandleClient(conn)
 }
-}
-
-func (p *SOCKS5Proxy) GetListenAddr() string {
-return p.ListenAddr
-}
-
-func (p *SOCKS5Proxy) GetTargetAddr() string {
-return p.TargetAddr
 }

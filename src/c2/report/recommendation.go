@@ -1,8 +1,6 @@
 package report
 
-import (
-"time"
-)
+import "time"
 
 type Recommendation struct {
 Title       string

