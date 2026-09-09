@@ -1,6 +1,6 @@
 # Angular Frontend Boundary
 
-This directory reserves the frontend boundary from the blueprint. Angular CLI 20.3.0 is installed in the development environment and is compatible with Node 22.13.0, but the application source has not been generated yet.
+This directory reserves the frontend boundary from the blueprint. Angular CLI 20.3.0 is the selected version and is compatible with Node 22.13.0, but the CLI is not verified in every development shell and the application source has not been generated yet.
 
 ## Next local step
 

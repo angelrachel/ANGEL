@@ -30,16 +30,17 @@ make validate
 
 ## Toolchain status
 
-Go, Node/npm, Python, Terraform, .NET SDK 10.0.401, Angular CLI 20.3.0, and LangGraph 1.2.11 are available in the current development environment. Node 22.13.0 is supported by the pinned Angular CLI version; the latest Angular CLI requires a newer Node patch release. The Angular and .NET application sources remain ungenerated boundaries until their contracts are approved.
+Go 1.27.1, Node 22.13.0/npm, and Python 3.12 are available in the current development environment. Terraform, the .NET SDK, Angular CLI, and the LangGraph virtual environment are not verified as available in every shell. Node 22.13.0 is compatible with the pinned Angular CLI version. The Angular and .NET application sources remain ungenerated boundaries until their contracts are approved.
 
 For a new shell in this development environment:
 
 ```bash
 export DOTNET_ROOT="$HOME/.dotnet"
 export PATH="$DOTNET_ROOT:$PATH"
-source .venv/bin/activate
+export PATH="$HOME/.local/bin:$PATH"
+source "$HOME/.venvs/angel-langgraph/bin/activate"
 ```
 
-The LangGraph pin is recorded in `apps/orchestrator-langgraph/requirements.txt`.
+The LangGraph pin is recorded in `apps/orchestrator-langgraph/requirements.txt`; install it into a local virtual environment before using that advisory boundary.
 
 All fixtures use `fixture://` references and the simulation contracts permit only `observe` or `simulate` modes.
