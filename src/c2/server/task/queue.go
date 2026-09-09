@@ -1,51 +1,68 @@
 package task
 
 import (
-"sync"
-"time"
+	"sync"
+	"time"
 )
 
 type Task struct {
-ID        string
-AgentID   string
-Type      string
-Payload   map[string]interface{}
-CreatedAt time.Time
+	ID        string
+	AgentID   string
+	Type      string
+	Payload   map[string]interface{}
+	CreatedAt time.Time
 }
 
 type Queue struct {
-mu    sync.Mutex
-tasks map[string]*Task
+	mu    sync.RWMutex
+	tasks map[string]*Task
 }
 
 func NewQueue() *Queue {
-return &Queue{tasks: make(map[string]*Task)}
+	return &Queue{tasks: make(map[string]*Task)}
+}
+
+func cloneTask(task *Task) *Task {
+	if task == nil {
+		return nil
+	}
+	clone := *task
+	if task.Payload != nil {
+		clone.Payload = make(map[string]interface{}, len(task.Payload))
+		for key, value := range task.Payload {
+			clone.Payload[key] = value
+		}
+	}
+	return &clone
 }
 
 func (q *Queue) Add(task *Task) {
-q.mu.Lock()
-defer q.mu.Unlock()
-q.tasks[task.ID] = task
+	if task == nil || task.ID == "" {
+		return
+	}
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	q.tasks[task.ID] = cloneTask(task)
 }
 
 func (q *Queue) Get(taskID string) *Task {
-q.mu.Lock()
-defer q.mu.Unlock()
-return q.tasks[taskID]
+	q.mu.RLock()
+	defer q.mu.RUnlock()
+	return cloneTask(q.tasks[taskID])
 }
 
 func (q *Queue) List() []*Task {
-q.mu.Lock()
-defer q.mu.Unlock()
-var tasks []*Task
-for _, task := range q.tasks {
-tasks = append(tasks, task)
-}
-return tasks
+	q.mu.RLock()
+	defer q.mu.RUnlock()
+	tasks := make([]*Task, 0, len(q.tasks))
+	for _, task := range q.tasks {
+		tasks = append(tasks, cloneTask(task))
+	}
+	return tasks
 }
 
 func (q *Queue) Delete(taskID string) {
-q.mu.Lock()
-defer q.mu.Unlock()
-delete(q.tasks, taskID)
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	delete(q.tasks, taskID)
 }
