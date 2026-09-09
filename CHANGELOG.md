@@ -22,3 +22,4 @@
 - Removed stale Python manifests and CI jobs because the repository contains no Python source.
 - Replaced the stale Python Dockerfile with a pinned Go multi-stage build and aligned Compose to port 8001.
 - Made Compose operator/shared/auth secrets mandatory instead of silently using development defaults.
+- Synchronized README and blueprint status paths with the actual Go repository layout and marked the absent decoy implementation explicitly.

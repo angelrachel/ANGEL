@@ -28,11 +28,11 @@ The target design follows functional separation between infrastructure component
 | Blueprint domain | Repository area | Current audit status |
 |---|---|---|
 | C2 framework | `src/c2/` | Partial; core and module skeletons exist |
-| Decoy/deception | `src/c2/server/decoy/`, `deploy/nginx/` | Partial |
-| SQL injection | `src/c2/modules/`, `src/sqli/` | Partial; coverage and safety boundaries require verification |
+| Decoy/deception | `src/c2/server/gateway/`, `deploy/nginx/` | Partial; decoy implementation is not present |
+| SQL injection | `src/c2/modules/exploitation/sqli/` | Partial; coverage and safety boundaries require verification |
 | NoSQL injection | `src/c2/modules/exploitation/nosqli/` | Partial |
 | Database post-exploitation | `src/c2/modules/post_exploitation/` | Skeleton/partial; implementation must be verified per DBMS |
-| Evasion and stealth | `src/c2/modules/evasion/`, `src/c2/modules/network_evasion/` | Skeleton/partial |
+| Evasion and stealth | `src/c2/modules/evasion/` | Skeleton/partial; contains high-risk paths that are not operationally supported |
 | Kerberos and Active Directory | `src/c2/modules/ad/` | Skeleton/partial |
 | Lateral movement | `src/c2/modules/lateral/` | Skeleton/partial |
 | Persistence | `src/c2/modules/persistence/` | Partial; platform coverage is incomplete |
@@ -40,13 +40,13 @@ The target design follows functional separation between infrastructure component
 | Credential access | `src/c2/modules/cred/`, `src/c2/modules/credential/` | Partial; platform-specific behavior requires verification |
 | Collector/infostealer | `src/c2/modules/collector/` | Skeleton/partial |
 | Destruction and impact | `src/c2/modules/destruct_impact/`, `src/c2/modules/destruction/` | Partial; use only in isolated, approved test environments |
-| Orchestrator and brain | `src/c2/orchestrator/`, `src/orchestrator/` | Partial |
+| Orchestrator and brain | `src/c2/orchestrator/`, `src/c2/modules/orchestrator/`, `src/c2/modules/brain/` | Partial |
 | Infrastructure | `deploy/` | Lab baseline; deployment references require validation |
-| OSINT and reconnaissance | `src/c2/osint/`, `src/osint/` | Partial; passive and active coverage differ |
-| Exploitation | `src/c2/modules/exploitation/`, `src/exploit/` | Partial |
-| Forensic evidence | `src/evidence/`, `src/c2/evidence/` | Foundation implemented; end-to-end verification required |
-| Reporting | `src/report/`, `src/reporting.py`, `src/c2/reporting/` | Partial |
-| Cleanup and deletion | `src/cleanup/`, `src/c2/modules/cleanup/` | Partial; cleanup behavior must be verified before use |
+| OSINT and reconnaissance | `src/c2/osint/` | Partial; passive and active coverage differ |
+| Exploitation | `src/c2/modules/exploitation/` | Partial |
+| Forensic evidence | `src/c2/evidence/` | Foundation implemented; end-to-end verification required |
+| Reporting | `src/c2/report/`, `src/c2/modules/reporting/` | Partial |
+| Cleanup and deletion | `src/c2/cleanup/`, `src/c2/modules/cleanup/` | Partial; cleanup behavior must be verified before use |
 
 This table is an engineering status guide, not a claim that every blueprint item is complete.
 
