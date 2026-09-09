@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CleanupManifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["manifest_id", "mode", "entries"],
+  "properties": {
+    "manifest_id": { "type": "string", "minLength": 1 },
+    "mode": { "type": "string", "enum": ["simulate", "verify"] },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path_ref", "status"],
+        "properties": {
+          "path_ref": { "type": "string", "pattern": "^fixture://" },
+          "status": { "type": "string", "enum": ["planned", "verified", "skipped", "failed"] }
+        }
+      }
+    }
+  }
+}

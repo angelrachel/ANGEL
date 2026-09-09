@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SimulationTask",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "agent_type", "target_ref", "technique", "mode", "requested_by"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "agent_type": { "type": "string", "minLength": 1 },
+    "target_ref": { "type": "string", "pattern": "^fixture://" },
+    "technique": { "type": "string", "minLength": 1 },
+    "mode": { "type": "string", "enum": ["observe", "simulate"] },
+    "requested_by": { "type": "string", "minLength": 1 },
+    "approval_id": { "type": ["string", "null"] }
+  }
+}

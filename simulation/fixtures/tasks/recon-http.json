@@ -1,0 +1,9 @@
+{
+  "id": "sim-task-recon-001",
+  "agent_type": "recon",
+  "target_ref": "fixture://lab/web-app-01",
+  "technique": "http-header-observation",
+  "mode": "simulate",
+  "requested_by": "fixture-operator",
+  "approval_id": null
+}

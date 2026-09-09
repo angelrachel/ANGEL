@@ -84,7 +84,9 @@ Generated status references:
 
 - [`docs/MODULE_INVENTORY.md`](docs/MODULE_INVENTORY.md) — conservative package inventory based on source and test evidence.
 - [`docs/ADR-001-architecture-boundary.md`](docs/ADR-001-architecture-boundary.md) — current Go-only architecture boundary.
+- [`docs/ARCHITECTURE_SCAFFOLD.md`](docs/ARCHITECTURE_SCAFFOLD.md) — contract-first folders, toolchain status, and next coding tasks.
 - `deploy/scripts/validate.sh` — static Terraform and shell validation; it does not apply or destroy infrastructure.
+- `Makefile` — local format, test, build, and validation commands.
 
 ## Local validation
 

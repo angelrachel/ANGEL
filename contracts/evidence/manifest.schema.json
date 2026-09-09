@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EvidenceManifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["record_count", "chain_hash"],
+  "properties": {
+    "record_count": { "type": "integer", "minimum": 0 },
+    "first_id": { "type": "string" },
+    "last_id": { "type": "string" },
+    "chain_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

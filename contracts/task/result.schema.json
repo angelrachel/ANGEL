@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SimulationResult",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["task_id", "status", "simulation", "authorized", "evidence_refs"],
+  "properties": {
+    "task_id": { "type": "string", "minLength": 1 },
+    "status": { "type": "string", "enum": ["accepted", "rejected", "completed", "failed"] },
+    "simulation": { "const": true },
+    "authorized": { "type": "boolean" },
+    "message": { "type": "string" },
+    "evidence_refs": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+  }
+}

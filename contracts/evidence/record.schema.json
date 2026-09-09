@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EvidenceRecord",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "timestamp", "sequence", "parent", "hash", "data"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "sequence": { "type": "integer", "minimum": 1 },
+    "parent": { "type": "string" },
+    "hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "data": { "type": "string" }
+  }
+}

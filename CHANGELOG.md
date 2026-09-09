@@ -34,3 +34,4 @@
 - Fixed passive TCP scanner concurrency limiting and port-range validation, and added localhost fixture tests.
 - Fixed report delivery to propagate file, encryption-key, cipher, nonce, and write errors instead of claiming success.
 - Added generated module inventory, static success/error checker, deployment-only validation script, and CI gates for all three.
+- Added contract-first architecture scaffold: API/task/authorization/evidence/report/cleanup schemas, simulation fixtures, agent metadata, Angular/.NET/LangGraph boundaries, lab directories, and root Makefile commands.

@@ -1,0 +1,11 @@
+{
+  "agent_id": "recon-http-001",
+  "domain": "osint",
+  "version": "0.1.0",
+  "mode": "simulate",
+  "input_contract": "contracts/task/task.schema.json",
+  "output_contract": "contracts/task/result.schema.json",
+  "capabilities": ["http-header-observation", "technology-fingerprint-fixture"],
+  "requires_approval": true,
+  "live_execution": false
+}

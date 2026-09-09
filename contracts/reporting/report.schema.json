@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SimulationReport",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "title", "start_time", "end_time", "findings", "simulation"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "start_time": { "type": "string", "format": "date-time" },
+    "end_time": { "type": "string", "format": "date-time" },
+    "simulation": { "const": true },
+    "findings": { "type": "array", "items": { "type": "object" } }
+  }
+}

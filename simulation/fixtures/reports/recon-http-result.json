@@ -1,0 +1,8 @@
+{
+  "task_id": "sim-task-recon-001",
+  "status": "completed",
+  "simulation": true,
+  "authorized": true,
+  "message": "fixture observation completed; no target action executed",
+  "evidence_refs": ["fixture://evidence/recon-http-001"]
+}
