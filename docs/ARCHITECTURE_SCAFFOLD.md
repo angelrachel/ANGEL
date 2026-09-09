@@ -21,10 +21,12 @@ make fmt
 make test
 make vet
 make build
+make safe-contracts
+make app-check
 make validate
 ```
 
-`make validate` does not deploy infrastructure. It checks source formatting, Go quality, repository hygiene, inventory generation, static findings, and shell syntax.
+`make validate` does not deploy infrastructure. It checks source formatting, Go quality, repository hygiene, inventory generation, static findings, safe contracts, and shell syntax. `make app-check` builds the Angular scaffold and runs the .NET and LangGraph tests.
 
 `deploy/scripts/deploy.sh` requires `ANGEL_ALLOW_APPLY=1` plus all three runtime secrets. `deploy/scripts/destroy.sh` requires `ANGEL_ALLOW_DESTROY=1`. Both guards are intentional and prevent an accidental apply/destroy from a copied shell command.
 
