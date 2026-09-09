@@ -29,3 +29,4 @@
 - Added engine, gateway, and listener tests and repaired Terraform VPC/lab module wiring.
 - Ran official Terraform formatting and validation successfully; committed the AWS provider lockfile for reproducible initialization.
 - Completed final PDF checklist verification: all 25 blueprint layers remain explicitly classified by evidence, with no unsupported completion claim.
+- Applied `gofmt` to all 195 previously non-formatted Go files; test, vet, build, and integrity checks remain passing.
