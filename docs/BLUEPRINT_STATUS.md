@@ -4,6 +4,8 @@ This matrix tracks the implementation status of the **ANGEL authorized red-team 
 
 The detailed 2026-09-10 structure review is recorded in [`C2_BLUEPRINT_AUDIT.md`](C2_BLUEPRINT_AUDIT.md). The repository currently builds 55 Go packages under `src/c2`; eleven Go test files now cover control-plane foundations, while the blueprint's Angular, .NET 10, and LangGraph components are not present as implemented runtimes.
 
+The architecture boundary is recorded in [`ADR-001-architecture-boundary.md`](ADR-001-architecture-boundary.md). Agent routing is explicitly simulation-only and evidence manifests now require a verified chain before they can be produced.
+
 Status meanings:
 
 - **Foundation:** supporting infrastructure or control-plane primitives exist.

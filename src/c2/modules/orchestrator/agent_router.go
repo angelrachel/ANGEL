@@ -33,6 +33,7 @@ type AgentTask struct {
 type AgentResult struct {
 	Type       AgentType
 	Success    bool
+	Simulation bool
 	Output     string
 	Authorized bool
 	Reason     string
@@ -65,6 +66,9 @@ func (a *AgentRouter) Route(ctx context.Context, task AgentTask) (AgentResult, e
 	if scope == nil {
 		return AgentResult{Type: task.Type, Reason: "engagement scope is not configured"}, fmt.Errorf("engagement scope is not configured")
 	}
+	if task.Class != core.ActionSimulation {
+		return AgentResult{Type: task.Type, Reason: "agent router supports simulation actions only"}, fmt.Errorf("agent router supports simulation actions only")
+	}
 
 	decision := scope.Authorize(core.ActionRequest{
 		Target:      task.Target,
@@ -87,6 +91,7 @@ func (a *AgentRouter) Route(ctx context.Context, task AgentTask) (AgentResult, e
 	result := AgentResult{
 		Type:       task.Type,
 		Success:    true,
+		Simulation: true,
 		Authorized: true,
 		Output:     "simulation route accepted; no target action executed",
 		Reason:     decision.Reason,

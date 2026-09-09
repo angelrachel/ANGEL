@@ -20,8 +20,8 @@ The PDF's own final checklist marks all 25 layers as unchecked. The final verifi
 | `go test ./...` | Passed |
 | `go vet ./...` | Passed |
 | Go package count under `src/c2` | 55 |
-| Go test files under `src/c2` | 11 |
-| C2 test coverage | Concentrated in engine, gateway, listener, evidence, orchestrator policy, report, API, crypto, database, and task stores; most assessment modules have no tests |
+| Go test files under `src/c2` | 13 |
+| C2 test coverage | Concentrated in engine, gateway, listener, evidence manifest/redaction, orchestrator policy, report, API, crypto, database, and task stores; most assessment modules have no tests |
 | Blueprint path comparison | Many blueprint paths have no exact repository match |
 | Duplicate basename review | Many repeated names are platform/package variants; they are not identical-file duplicates by themselves |
 
@@ -54,6 +54,8 @@ The repository has a passing compile and vet baseline, but test coverage is unev
 - blueprint paths represented by filenames or skeletons without an integration test.
 
 The control-plane baseline now includes configurable host/port binding, bounded JSON framing, constant-time bearer authentication, request identity validation, security response headers, health checks, graceful shutdown deadlines, and fail-closed gateway route tests. These improvements do not change the status of the high-risk modules listed above.
+
+The AgentRouter now rejects passive and active classes and emits an explicit `Simulation` result flag. Evidence manifests are generated only from a verified chain and include deterministic first/last IDs and chain hash metadata.
 
 The final verification on 2026-09-10 passed the repository integrity checker across 266 tracked files, `go test ./...`, `go vet ./...`, and a production-style Go build. The only `setup-python` reference is the CI runner used to execute the repository hygiene script; no Python application dependency or Python runtime is part of the control-plane image.
 

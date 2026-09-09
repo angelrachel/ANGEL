@@ -41,7 +41,7 @@ func TestAgentRouterAcceptsAuthorizedSimulationOnly(t *testing.T) {
 		Type: AgentRecon, Target: "LAB.EXAMPLE", Technique: "SIMULATED-VALIDATION",
 		Class: core.ActionSimulation, RequestedBy: "operator",
 	})
-	if err != nil || !result.Success || !result.Authorized {
+	if err != nil || !result.Success || !result.Authorized || !result.Simulation {
 		t.Fatalf("expected authorized simulation route, result=%#v err=%v", result, err)
 	}
 	if !strings.Contains(result.Output, "no target action executed") {
@@ -57,6 +57,7 @@ func TestAgentRouterRejectsOutOfScopeAndActiveWithoutApproval(t *testing.T) {
 	cases := []AgentTask{
 		{Type: AgentRecon, Target: "outside.example", Technique: "simulated-validation", Class: core.ActionSimulation, RequestedBy: "operator"},
 		{Type: AgentRecon, Target: "lab.example", Technique: "simulated-validation", Class: core.ActionActive, RequestedBy: "operator"},
+		{Type: AgentRecon, Target: "lab.example", Technique: "simulated-validation", Class: core.ActionPassive, RequestedBy: "operator"},
 	}
 	for _, task := range cases {
 		result, err := router.Route(context.Background(), task)
