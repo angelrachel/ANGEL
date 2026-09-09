@@ -1,13 +1,10 @@
 package evidence
 
 type ParentChild struct {
-Parent string
-Child  string
+	Parent string
+	Child  string
 }
 
 func (p ParentChild) Validate() bool {
-if p.Parent == "" || p.Child == "" {
-return true
-}
-return true
+	return p.Parent != "" && p.Child != "" && p.Parent != p.Child
 }

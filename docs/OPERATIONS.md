@@ -6,7 +6,7 @@ Confirm a signed authorization, an active Rules of Engagement record, the target
 
 ## Start-up checks
 
-Run the test suite and security checks before deployment. In production or staging, configure non-placeholder operator, shared, and authentication secrets. Bind the service to a private interface and place it behind the hardened reverse proxy. Confirm the health and readiness endpoints, database permissions, and backup destination.
+Run the test suite and security checks before deployment. Inject `ANGEL_OPERATOR_KEY`, `ANGEL_SHARED_KEY`, and `ANGEL_AUTH_SECRET` from a managed secret store; the operator API intentionally fails closed when `ANGEL_OPERATOR_KEY` is unset and has no source-code default. Bind the service to a private interface and place it behind the hardened reverse proxy. Confirm the health and readiness endpoints, database permissions, and backup destination.
 
 ## Assessment workflow
 
@@ -14,7 +14,7 @@ Create the scope with exact hosts and paths. Create an auditable assessment plan
 
 ## Evidence handling
 
-Export the evidence chain and its manifest together. Verify the chain before sharing it. Store backups with restricted permissions and apply the documented retention period. Treat the SQLite database, reports, and manifests as sensitive engagement artifacts.
+Export the evidence chain and its manifest together. Verify sequence numbers, parent links, record hashes, and timestamps before sharing it; a failed verification is an incident, not a recoverable warning. Store backups with restricted permissions and apply the documented retention period. Treat the SQLite database, reports, and manifests as sensitive engagement artifacts.
 
 ## Incident response
 
