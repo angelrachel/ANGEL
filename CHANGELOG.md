@@ -23,3 +23,4 @@
 - Replaced the stale Python Dockerfile with a pinned Go multi-stage build and aligned Compose to port 8001.
 - Made Compose operator/shared/auth secrets mandatory instead of silently using development defaults.
 - Synchronized README and blueprint status paths with the actual Go repository layout and marked the absent decoy implementation explicitly.
+- Added a quantitative C2 blueprint audit covering 55 Go packages, eight test files, missing Angular/.NET/LangGraph runtimes, and unverified blueprint subtrees.
