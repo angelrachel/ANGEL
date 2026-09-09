@@ -15,3 +15,11 @@ func TestRedactorRemovesSensitiveValues(t *testing.T) {
 		t.Fatalf("expected all sensitive patterns to be redacted: %q", output)
 	}
 }
+
+func TestNilRedactorLeavesInputUnchanged(t *testing.T) {
+	input := "synthetic evidence"
+	var redactor *Redactor
+	if got := redactor.Redact(input); got != input {
+		t.Fatalf("expected nil redactor to preserve input, got %q", got)
+	}
+}

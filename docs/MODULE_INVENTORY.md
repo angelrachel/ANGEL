@@ -4,7 +4,7 @@ Generated from source/test evidence; a filename does not prove operational capab
 
 | Package path | Go files | Test files | Conservative status |
 |---|---:|---:|---|
-| `src/c2/cleanup` | 1 | 0 | skeleton/unverified |
+| `src/c2/cleanup` | 3 | 1 | foundation-tested |
 | `src/c2/evidence` | 9 | 3 | foundation-tested |
 | `src/c2/implant/linux` | 1 | 0 | partial/high-risk |
 | `src/c2/implant/windows` | 1 | 0 | partial/high-risk |
@@ -67,3 +67,4 @@ Generated from source/test evidence; a filename does not prove operational capab
 | `src/c2/server/gateway` | 2 | 1 | foundation-tested |
 | `src/c2/server/listener` | 3 | 1 | foundation-tested |
 | `src/c2/server/task` | 3 | 1 | foundation-tested |
+| `src/c2/simulation/replay` | 3 | 2 | foundation-tested |

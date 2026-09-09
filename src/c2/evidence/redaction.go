@@ -23,7 +23,13 @@ func NewRedactor() *Redactor {
 }
 
 func (r *Redactor) Redact(input string) string {
+	if r == nil {
+		return input
+	}
 	for _, re := range r.Regexes {
+		if re == nil {
+			continue
+		}
 		input = re.ReplaceAllString(input, "[REDACTED]")
 	}
 	return input

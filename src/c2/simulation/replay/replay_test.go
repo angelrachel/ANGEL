@@ -43,3 +43,17 @@ func TestReplayRejectsMismatchedTaskAndExternalEvidence(t *testing.T) {
 		t.Fatal("expected mismatched task to be rejected")
 	}
 }
+
+func TestReplayRejectsUnknownFieldsAndTrailingJSON(t *testing.T) {
+	task := []byte(`{"id":"task-1","agent_type":"recon","target_ref":"fixture://lab/web-app-01","technique":"http-header-observation","mode":"simulate","requested_by":"operator","extra":true}`)
+	result := []byte(`{"task_id":"task-1","status":"completed","simulation":true,"authorized":true,"evidence_refs":[]}`)
+	if _, err := Replay(task, result); err == nil {
+		t.Fatal("expected unknown task field to be rejected")
+	}
+
+	task = []byte(`{"id":"task-1","agent_type":"recon","target_ref":"fixture://lab/web-app-01","technique":"http-header-observation","mode":"simulate","requested_by":"operator"}`)
+	result = []byte(`{"task_id":"task-1","status":"completed","simulation":true,"authorized":true,"evidence_refs":[]} {}`)
+	if _, err := Replay(task, result); err == nil {
+		t.Fatal("expected trailing JSON to be rejected")
+	}
+}

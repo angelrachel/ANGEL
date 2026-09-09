@@ -50,11 +50,13 @@ func (l *Ledger) AddRecord(data string) Record {
 // An empty chain is valid; any malformed or tampered record makes it invalid.
 func VerifyChain(records []Record) bool {
 	parent := "0"
+	var previous time.Time
 	for i, record := range records {
 		if record.Sequence != int64(i+1) || record.Parent != parent {
 			return false
 		}
-		if _, err := time.Parse(time.RFC3339, record.Timestamp); err != nil {
+		timestamp, err := time.Parse(time.RFC3339, record.Timestamp)
+		if err != nil || (!previous.IsZero() && timestamp.Before(previous)) {
 			return false
 		}
 		expected := recordHash(record.Data, record.Parent)
@@ -62,6 +64,7 @@ func VerifyChain(records []Record) bool {
 			return false
 		}
 		parent = record.Hash
+		previous = timestamp
 	}
 	return true
 }

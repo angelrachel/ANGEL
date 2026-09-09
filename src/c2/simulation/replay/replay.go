@@ -1,9 +1,11 @@
 package replay
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 )
 
@@ -28,11 +30,11 @@ type Result struct {
 
 func Replay(taskData, resultData []byte) (Result, error) {
 	var task Task
-	if err := json.Unmarshal(taskData, &task); err != nil {
+	if err := decodeStrict(taskData, &task); err != nil {
 		return Result{}, fmt.Errorf("decode task: %w", err)
 	}
 	var result Result
-	if err := json.Unmarshal(resultData, &result); err != nil {
+	if err := decodeStrict(resultData, &result); err != nil {
 		return Result{}, fmt.Errorf("decode result: %w", err)
 	}
 	if err := validateTask(task); err != nil {
@@ -42,6 +44,22 @@ func Replay(taskData, resultData []byte) (Result, error) {
 		return Result{}, err
 	}
 	return result, nil
+}
+
+func decodeStrict(data []byte, target any) error {
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(target); err != nil {
+		return err
+	}
+	var extra any
+	if err := decoder.Decode(&extra); err != io.EOF {
+		if err == nil {
+			return errors.New("multiple JSON values are not allowed")
+		}
+		return err
+	}
+	return nil
 }
 
 func validateTask(task Task) error {

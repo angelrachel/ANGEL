@@ -35,6 +35,17 @@ func TestVerifyChainRejectsBrokenSequenceAndParent(t *testing.T) {
 	}
 }
 
+func TestVerifyChainRejectsOutOfOrderTimestamps(t *testing.T) {
+	ledger := NewLedger()
+	ledger.AddRecord(`{"event":"scope-created"}`)
+	ledger.AddRecord(`{"event":"assessment-started"}`)
+	ledger.Records[0].Timestamp = "2026-09-10T02:00:00Z"
+	ledger.Records[1].Timestamp = "2026-09-10T01:00:00Z"
+	if VerifyChain(ledger.Records) {
+		t.Fatal("expected out-of-order timestamps to fail verification")
+	}
+}
+
 func TestParentChildValidation(t *testing.T) {
 	valid := ParentChild{Parent: "scope-1", Child: "task-1"}
 	if !valid.Validate() {
