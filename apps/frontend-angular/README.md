@@ -1,9 +1,12 @@
 # Angular Frontend Boundary
 
-This directory reserves the frontend boundary from the blueprint. Angular CLI 20.3.0 is the selected version and is compatible with Node 22.13.0, but the CLI is not verified in every development shell and the application source has not been generated yet.
+This directory contains the Angular 20.3.0 standalone scaffold for the blueprint frontend boundary. The source is intentionally limited to a local observe/simulate UI foundation and does not contain live-target, command-execution, implant, persistence, or exploit endpoints.
 
-## Next local step
+## Local commands
 
-When the API contract is approved, initialize the application with `ng new` using the pinned CLI. Map the UI to `contracts/api/openapi.yaml`, `contracts/task/`, `contracts/authorization/`, `contracts/evidence/`, and `contracts/reporting/`.
+```bash
+npm install
+npm run build
+```
 
-The frontend must expose observe/simulate workflows only until an additional architecture decision is approved.
+Map future UI work to `contracts/api/openapi.yaml`, `contracts/task/`, `contracts/authorization/`, `contracts/evidence/`, and `contracts/reporting/`. Keep live execution outside this boundary unless a separately reviewed architecture decision changes the policy gate.

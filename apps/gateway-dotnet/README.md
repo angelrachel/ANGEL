@@ -1,5 +1,14 @@
 # .NET Gateway Boundary
 
-This directory reserves the .NET 10 gateway boundary from the blueprint. The .NET SDK 10.0.401 is the selected version but is not verified as installed in every development shell. No `.csproj` or generated runtime is claimed until the API contract and project ownership are approved.
+This directory contains the .NET 10.0.401 empty gateway scaffold for the blueprint API boundary. It intentionally exposes no live-target, arbitrary command, implant, persistence, exploit, or destructive endpoints.
 
-Implement the gateway against `contracts/api/openapi.yaml` only after the SDK/toolchain is pinned. It must preserve the Go control-plane policy boundary and expose observe/simulate contracts without arbitrary command or live-target endpoints.
+## Local commands
+
+```bash
+export DOTNET_ROOT="$HOME/.dotnet"
+export PATH="$DOTNET_ROOT:$PATH"
+dotnet restore AngelGateway.csproj
+dotnet build AngelGateway.csproj --no-restore
+```
+
+Implement future gateway routes against `contracts/api/openapi.yaml` only. Preserve the Go control-plane policy boundary and expose observe/simulate contracts without bypassing authorization or evidence requirements.
