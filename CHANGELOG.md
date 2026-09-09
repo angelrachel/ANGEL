@@ -14,3 +14,4 @@
 - Added a fail-closed engagement scope and approval gate with unit coverage.
 - Applied the scope gate to the agent router; accepted routes are simulation acknowledgements and do not execute target actions.
 - Hardened API middleware and route registry with fail-closed auth, constant-time token comparison, concurrency safety, and JSON health headers.
+- Added report validation for identity, chronology, required finding fields, and supported severity values, plus Markdown escaping tests.
