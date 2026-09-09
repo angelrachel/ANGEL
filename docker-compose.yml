@@ -2,15 +2,15 @@ services:
   angel:
     build: .
     ports:
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:8001:8001"
     environment:
       ANGEL_ENV: ${ANGEL_ENV:-development}
       ANGEL_HOST: 0.0.0.0
-      ANGEL_PORT: 8000
+      ANGEL_PORT: 8001
       ANGEL_DATABASE: /data/c2.db
-      ANGEL_OPERATOR_KEY: ${ANGEL_OPERATOR_KEY:-development-operator-key}
-      ANGEL_SHARED_KEY: ${ANGEL_SHARED_KEY:-development-only-key}
-      ANGEL_AUTH_SECRET: ${ANGEL_AUTH_SECRET:-development-auth-secret}
+      ANGEL_OPERATOR_KEY: ${ANGEL_OPERATOR_KEY:?ANGEL_OPERATOR_KEY must be set}
+      ANGEL_SHARED_KEY: ${ANGEL_SHARED_KEY:?ANGEL_SHARED_KEY must be set}
+      ANGEL_AUTH_SECRET: ${ANGEL_AUTH_SECRET:?ANGEL_AUTH_SECRET must be set}
     volumes:
       - angel-data:/data
     cap_drop:
@@ -20,11 +20,5 @@ services:
     read_only: true
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=16m
-    healthcheck:
-      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/healthz', timeout=3)"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
 volumes:
   angel-data:

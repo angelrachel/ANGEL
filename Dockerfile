@@ -1,21 +1,13 @@
-FROM python:3.11-slim
+FROM golang:1.27.1 AS builder
+WORKDIR /src
+COPY go.mod ./
+COPY src/ ./src/
+RUN CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o /out/angel-server ./src/c2
 
-WORKDIR /app
-ENV PYTHONPATH=/app \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt \
-    && useradd --create-home --uid 10001 angel
-
-COPY src/ src/
-RUN mkdir -p /data && chown -R angel:angel /app /data
-
-USER angel
-EXPOSE 8000
-VOLUME ["/data"]
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/healthz', timeout=3)"
-
-CMD ["python", "-m", "src.c2"]
+FROM gcr.io/distroless/static-debian12:nonroot
+COPY --from=builder /out/angel-server /angel-server
+ENV ANGEL_HOST=0.0.0.0
+ENV ANGEL_PORT=8001
+EXPOSE 8001
+USER nonroot:nonroot
+ENTRYPOINT ["/angel-server"]

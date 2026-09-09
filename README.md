@@ -63,7 +63,7 @@ ANGEL/
 ├── deploy/                 # Terraform, Ansible, Nginx, and deployment scripts
 ├── tests/                  # Automated tests currently focused on foundation code
 ├── docs/                   # Operations and status documentation
-└── go.mod / pyproject.toml # Language and tooling configuration
+└── go.mod                # Go module and tooling configuration
 ```
 
 ## Development status
@@ -82,19 +82,15 @@ The following items remain important engineering work:
 
 ## Local validation
 
-Use the project-specific toolchain and dependency lock files when available. The intended baseline checks are:
+The repository currently contains Go source only. Use the pinned Go toolchain and run the baseline checks:
 
 ```bash
-python -m pip install -r requirements.txt
-pytest -q
-ruff check src tests
-mypy src
-bandit -q -r src
 go test ./...
 go vet ./...
+go build ./...
 ```
 
-The commands above are validation targets. A successful documentation check must not be inferred unless the required tools are installed and the commands complete successfully.
+The Docker image is built with the same Go control-plane entrypoint. A successful documentation check must not be inferred unless the required tools are installed and the commands complete successfully.
 
 ## Security and operational boundary
 

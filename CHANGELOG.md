@@ -18,3 +18,7 @@
 - Hardened the control-plane store with RWMutex snapshots and generation-aware expiry timers.
 - Hardened task/result stores with defensive copies, nil rejection, and read locks.
 - Fixed AES-GCM to propagate nonce RNG failures and reject truncated ciphertext.
+- Removed tracked duplicate ELF build artifacts (`c2` and `server`).
+- Removed stale Python manifests and CI jobs because the repository contains no Python source.
+- Replaced the stale Python Dockerfile with a pinned Go multi-stage build and aligned Compose to port 8001.
+- Made Compose operator/shared/auth secrets mandatory instead of silently using development defaults.

@@ -9,8 +9,8 @@
       ansible.builtin.file:
         path: /var/lib/angel
         state: directory
-        owner: 10001
-        group: 10001
+        owner: 65532
+        group: 65532
         mode: "0750"
 
     - name: Run ANGEL control plane container
@@ -18,9 +18,9 @@
         name: "{{ angel_container }}"
         image: "{{ angel_image }}"
         restart_policy: unless-stopped
-        user: "10001:10001"
+        user: "65532:65532"
         published_ports:
-          - "127.0.0.1:8000:8000"
+          - "127.0.0.1:8001:8001"
         volumes:
           - /var/lib/angel:/data
         read_only: true
@@ -30,8 +30,3 @@
           - no-new-privileges:true
         tmpfs:
           - "/tmp:rw,noexec,nosuid,size=16m"
-        healthcheck:
-          test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/healthz', timeout=3)"]
-          interval: 30s
-          timeout: 5s
-          retries: 3

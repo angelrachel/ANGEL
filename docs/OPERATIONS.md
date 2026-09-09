@@ -6,7 +6,7 @@ Confirm a signed authorization, an active Rules of Engagement record, the target
 
 ## Start-up checks
 
-Run the test suite and security checks before deployment. Inject `ANGEL_OPERATOR_KEY`, `ANGEL_SHARED_KEY`, and `ANGEL_AUTH_SECRET` from a managed secret store; the operator API intentionally fails closed when `ANGEL_OPERATOR_KEY` is unset and has no source-code default. Bind the service to a private interface and place it behind the hardened reverse proxy. Confirm the health and readiness endpoints, database permissions, and backup destination.
+Run the test suite and security checks before deployment. Inject `ANGEL_OPERATOR_KEY`, `ANGEL_SHARED_KEY`, and `ANGEL_AUTH_SECRET` from a managed secret store; the operator API intentionally fails closed when `ANGEL_OPERATOR_KEY` is unset and has no source-code default. Bind the service to a private interface and place it behind the hardened reverse proxy. Confirm the configured API route, database permissions, and backup destination.
 
 ## Assessment workflow
 

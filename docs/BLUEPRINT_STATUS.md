@@ -38,7 +38,7 @@ Status meanings:
 
 ## Repository-level blockers
 
-The current repository still contains generated executables and a local database alongside source code. Build provenance, toolchain pinning, and clean artifact policy must be resolved before release packaging.
+Generated ELF executables have been removed from source control. The repository now builds the Go control-plane from the Dockerfile's pinned toolchain; release provenance and Terraform provider lockfile review remain required before packaging.
 
 Several modules contain placeholder comments, short skeleton implementations, or behavior that does not match the function name. A file's presence in the tree must not be treated as proof that the corresponding blueprint capability is operational.
 
