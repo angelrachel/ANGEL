@@ -26,6 +26,8 @@ make validate
 
 `make validate` does not deploy infrastructure. It checks source formatting, Go quality, repository hygiene, inventory generation, static findings, and shell syntax.
 
+`deploy/scripts/deploy.sh` requires `ANGEL_ALLOW_APPLY=1` plus all three runtime secrets. `deploy/scripts/destroy.sh` requires `ANGEL_ALLOW_DESTROY=1`. Both guards are intentional and prevent an accidental apply/destroy from a copied shell command.
+
 ## Toolchain status
 
 Go, Node/npm, Python, and Terraform are available in the current development environment. The .NET SDK is not installed, and Angular/LangGraph runtimes have not been initialized. This is intentional: the repository now has named boundaries and contracts without creating misleading, unbuildable application files.

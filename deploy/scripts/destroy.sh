@@ -1,9 +1,12 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
 
-echo "[+] Destroying ANGEL infrastructure..."
-
-cd deploy/terraform
-terraform destroy -auto-approve
-
-echo "[+] Infrastructure destroyed!"
+if [[ "${ANGEL_ALLOW_DESTROY:-}" != "1" ]]; then
+  echo "Refusing destroy: set ANGEL_ALLOW_DESTROY=1 after reviewing the plan in an authorized lab." >&2
+  exit 1
+fi
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$ROOT/deploy/terraform"
+terraform init -input=false
+terraform destroy -input=false -auto-approve
+printf '%s\n' '[+] Infrastructure destroy completed'

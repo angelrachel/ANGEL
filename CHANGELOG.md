@@ -35,3 +35,4 @@
 - Fixed report delivery to propagate file, encryption-key, cipher, nonce, and write errors instead of claiming success.
 - Added generated module inventory, static success/error checker, deployment-only validation script, and CI gates for all three.
 - Added contract-first architecture scaffold: API/task/authorization/evidence/report/cleanup schemas, simulation fixtures, agent metadata, Angular/.NET/LangGraph boundaries, lab directories, and root Makefile commands.
+- Corrected `.env.example` to match port 8001 and `/data/c2.db`, made deploy/destroy scripts require explicit lab opt-in flags, and added READMEs for previously empty scaffold boundaries.
