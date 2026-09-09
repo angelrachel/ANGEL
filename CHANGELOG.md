@@ -27,3 +27,4 @@
 - Hardened the control-plane engine with configurable binding, bounded JSON framing, identity validation, security headers, health checks, and graceful shutdown.
 - Fixed gateway route selection so valid configured credentials reach authorized routes while unset credentials remain fail-closed.
 - Added engine, gateway, and listener tests and repaired Terraform VPC/lab module wiring.
+- Ran official Terraform formatting and validation successfully; committed the AWS provider lockfile for reproducible initialization.
