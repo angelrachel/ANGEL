@@ -6,6 +6,8 @@ The detailed 2026-09-10 structure review is recorded in [`C2_BLUEPRINT_AUDIT.md`
 
 The architecture boundary is recorded in [`ADR-001-architecture-boundary.md`](ADR-001-architecture-boundary.md). Agent routing is explicitly simulation-only and evidence manifests now require a verified chain before they can be produced.
 
+The generated [`MODULE_INVENTORY.md`](MODULE_INVENTORY.md) records a conservative status for each Go package based on source and test evidence. `scripts/static_success_checker.py` reports legacy success literals and ignored command errors without executing them; its findings remain review items rather than proof of capability.
+
 Status meanings:
 
 - **Foundation:** supporting infrastructure or control-plane primitives exist.

@@ -80,6 +80,12 @@ The following items remain important engineering work:
 6. Verify Terraform, Ansible, Nginx, container, certificate, and network-separation configuration in an isolated lab.
 7. Keep evidence, authorization records, target inventory, and engagement data outside the public source tree.
 
+Generated status references:
+
+- [`docs/MODULE_INVENTORY.md`](docs/MODULE_INVENTORY.md) — conservative package inventory based on source and test evidence.
+- [`docs/ADR-001-architecture-boundary.md`](docs/ADR-001-architecture-boundary.md) — current Go-only architecture boundary.
+- `deploy/scripts/validate.sh` — static Terraform and shell validation; it does not apply or destroy infrastructure.
+
 ## Local validation
 
 The repository currently contains Go source only. Use the pinned Go toolchain and run the baseline checks:

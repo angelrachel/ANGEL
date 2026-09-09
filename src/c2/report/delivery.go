@@ -5,13 +5,14 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"crypto/sha256"
-	"io"
+	"errors"
 	"os"
 )
 
 type DeliveryResult struct {
 	Path   string
 	Status string
+	Error  string
 }
 
 type Delivery struct {
@@ -19,21 +20,43 @@ type Delivery struct {
 }
 
 func (d Delivery) SaveJSON(path string, content string) DeliveryResult {
-	os.WriteFile(path, []byte(content), 0644)
-	return DeliveryResult{Path: path, Status: "success"}
+	return d.writeFile(path, []byte(content), 0644)
 }
 
 func (d Delivery) SaveMarkdown(path string, content string) DeliveryResult {
-	os.WriteFile(path, []byte(content), 0644)
+	return d.writeFile(path, []byte(content), 0644)
+}
+
+func (d Delivery) writeFile(path string, content []byte, mode os.FileMode) DeliveryResult {
+	if path == "" {
+		return DeliveryResult{Path: path, Status: "failed", Error: "output path is required"}
+	}
+	if err := os.WriteFile(path, content, mode); err != nil {
+		return DeliveryResult{Path: path, Status: "failed", Error: err.Error()}
+	}
 	return DeliveryResult{Path: path, Status: "success"}
 }
 
 func (d Delivery) EncryptFile(path string, content []byte) DeliveryResult {
+	if d.Key == "" {
+		return DeliveryResult{Path: path, Status: "failed", Error: "encryption key is required"}
+	}
 	key := sha256.Sum256([]byte(d.Key))
-	block, _ := aes.NewCipher(key[:])
-	gcm, _ := cipher.NewGCM(block)
+	block, err := aes.NewCipher(key[:])
+	if err != nil {
+		return DeliveryResult{Path: path, Status: "failed", Error: err.Error()}
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return DeliveryResult{Path: path, Status: "failed", Error: err.Error()}
+	}
 	nonce := make([]byte, gcm.NonceSize())
-	io.ReadFull(rand.Reader, nonce)
-	os.WriteFile(path, gcm.Seal(nonce, nonce, content, nil), 0600)
-	return DeliveryResult{Path: path, Status: "success"}
+	if _, err := rand.Read(nonce); err != nil {
+		return DeliveryResult{Path: path, Status: "failed", Error: err.Error()}
+	}
+	result := d.writeFile(path, gcm.Seal(nonce, nonce, content, nil), 0600)
+	if result.Status != "success" && result.Error == "" {
+		result.Error = errors.New("encrypted file write failed").Error()
+	}
+	return result
 }

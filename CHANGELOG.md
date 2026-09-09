@@ -31,3 +31,6 @@
 - Completed final PDF checklist verification: all 25 blueprint layers remain explicitly classified by evidence, with no unsupported completion claim.
 - Applied `gofmt` to all 195 previously non-formatted Go files; test, vet, build, and integrity checks remain passing.
 - Added an architecture boundary ADR, deterministic evidence manifests, redaction tests, and an explicit simulation-only AgentRouter result.
+- Fixed passive TCP scanner concurrency limiting and port-range validation, and added localhost fixture tests.
+- Fixed report delivery to propagate file, encryption-key, cipher, nonce, and write errors instead of claiming success.
+- Added generated module inventory, static success/error checker, deployment-only validation script, and CI gates for all three.
