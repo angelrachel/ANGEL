@@ -11,6 +11,8 @@ The repository is **not structurally complete against the blueprint**. The Go so
 
 No offensive capability was executed during this audit. The review was limited to file structure, package compilation, static inspection, and tests.
 
+The PDF's own final checklist marks all 25 layers as unchecked. The final verification therefore does not convert any layer to “complete” based on filenames alone. In particular, layers 22–25 (credential attack/auth bypass, network evasion, full destruction chain, and live implant generator) remain unverified and are outside the safe implementation scope of this repository review.
+
 ## Verification performed
 
 | Check | Result |
@@ -40,6 +42,8 @@ No offensive capability was executed during this audit. The review was limited t
 | Reporting | Go report foundation and tests exist; PDF/encrypted delivery/metrics/timeline coverage is incomplete | Partial |
 | Infrastructure | Terraform, Ansible, and Nginx directories exist; reproducible multi-node deployment is not proven | Foundation/partial |
 
+The PDF's claimed totals—approximately 98+ agents and 650+ modules—are not independently demonstrated by the repository. A file-count approximation would overstate capability because many files are skeletons, duplicate platform variants, or untested high-risk stubs.
+
 ## Code quality observations
 
 The repository has a passing compile and vet baseline, but test coverage is uneven. The newly verified tests cover policy enforcement and control-plane primitives. The following classes still contain unverified or high-risk behavior and should not be treated as production-ready merely because they compile:
@@ -50,6 +54,8 @@ The repository has a passing compile and vet baseline, but test coverage is unev
 - blueprint paths represented by filenames or skeletons without an integration test.
 
 The control-plane baseline now includes configurable host/port binding, bounded JSON framing, constant-time bearer authentication, request identity validation, security response headers, health checks, graceful shutdown deadlines, and fail-closed gateway route tests. These improvements do not change the status of the high-risk modules listed above.
+
+The final verification on 2026-09-10 passed the repository integrity checker across 266 tracked files, `go test ./...`, `go vet ./...`, and a production-style Go build. The only `setup-python` reference is the CI runner used to execute the repository hygiene script; no Python application dependency or Python runtime is part of the control-plane image.
 
 ## Duplicate-file interpretation
 
