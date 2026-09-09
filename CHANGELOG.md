@@ -36,3 +36,4 @@
 - Added generated module inventory, static success/error checker, deployment-only validation script, and CI gates for all three.
 - Added contract-first architecture scaffold: API/task/authorization/evidence/report/cleanup schemas, simulation fixtures, agent metadata, Angular/.NET/LangGraph boundaries, lab directories, and root Makefile commands.
 - Corrected `.env.example` to match port 8001 and `/data/c2.db`, made deploy/destroy scripts require explicit lab opt-in flags, and added READMEs for previously empty scaffold boundaries.
+- Installed local development toolchains (.NET SDK 10.0.401, Angular CLI 20.3.0, LangGraph 1.2.11) and recorded the LangGraph pin without committing caches or generated application source.
