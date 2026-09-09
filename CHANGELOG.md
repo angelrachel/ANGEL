@@ -12,3 +12,4 @@
 - Added bounded JSON request decoding, strict JSON fields, and method checks to control-plane endpoints.
 - Fixed IPv6 endpoint formatting in the TCP/UDP inventory scanner.
 - Added a fail-closed engagement scope and approval gate with unit coverage.
+- Applied the scope gate to the agent router; accepted routes are simulation acknowledgements and do not execute target actions.

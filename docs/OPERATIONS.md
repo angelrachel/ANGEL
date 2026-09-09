@@ -14,7 +14,7 @@ Create the scope with exact hosts and paths. Create an auditable assessment plan
 
 The Go package `src/c2/orchestrator` provides an authorization gate for this workflow. A request is allowed only when the engagement is marked authorized, the Rules of Engagement identifier and validity window are present, the requester is identified, the target and technique are allowlisted, and active actions carry an explicit approval ID. Integrate `EngagementScope.Authorize` before dispatching any assessment or simulator task; do not bypass it in adapters.
 
-The remaining integration work is intentionally repository-owner work: persist scopes and approvals in the selected database, bind approvals to authenticated operator identities, append allow/deny decisions to the evidence ledger, and connect the gate to every dispatch path. Until those integrations are complete, the scope type is a tested policy primitive rather than a claim of end-to-end enforcement.
+The orchestrator agent router now requires a configured scope and applies this gate before accepting a route. It returns a simulation acknowledgement and does not execute commands or target actions. The remaining integration work is intentionally repository-owner work: persist scopes and approvals in the selected database, bind approvals to authenticated operator identities, append allow/deny decisions to the evidence ledger, and connect the gate to every other dispatch path. Until those integrations are complete, this is not a claim of end-to-end enforcement for the whole repository.
 
 ## Evidence handling
 
