@@ -4,7 +4,17 @@
   vars:
     angel_image: "angel-control-plane:latest"
     angel_container: "angel-control-plane"
+    angel_operator_key: "{{ lookup('env', 'ANGEL_OPERATOR_KEY') }}"
+    angel_shared_key: "{{ lookup('env', 'ANGEL_SHARED_KEY') }}"
+    angel_auth_secret: "{{ lookup('env', 'ANGEL_AUTH_SECRET') }}"
   tasks:
+    - name: Require runtime secrets
+      ansible.builtin.assert:
+        that:
+          - angel_operator_key | length > 0
+          - angel_shared_key | length > 0
+          - angel_auth_secret | length > 0
+        fail_msg: "ANGEL_OPERATOR_KEY, ANGEL_SHARED_KEY, and ANGEL_AUTH_SECRET must be set in the deployment environment"
     - name: Ensure ANGEL data directory exists
       ansible.builtin.file:
         path: /var/lib/angel
@@ -19,6 +29,13 @@
         image: "{{ angel_image }}"
         restart_policy: unless-stopped
         user: "65532:65532"
+        env:
+          ANGEL_ENV: "production"
+          ANGEL_HOST: "0.0.0.0"
+          ANGEL_PORT: "8001"
+          ANGEL_OPERATOR_KEY: "{{ angel_operator_key }}"
+          ANGEL_SHARED_KEY: "{{ angel_shared_key }}"
+          ANGEL_AUTH_SECRET: "{{ angel_auth_secret }}"
         published_ports:
           - "127.0.0.1:8001:8001"
         volumes:

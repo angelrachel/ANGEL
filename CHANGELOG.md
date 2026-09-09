@@ -24,3 +24,6 @@
 - Made Compose operator/shared/auth secrets mandatory instead of silently using development defaults.
 - Synchronized README and blueprint status paths with the actual Go repository layout and marked the absent decoy implementation explicitly.
 - Added a quantitative C2 blueprint audit covering 55 Go packages, eight test files, missing Angular/.NET/LangGraph runtimes, and unverified blueprint subtrees.
+- Hardened the control-plane engine with configurable binding, bounded JSON framing, identity validation, security headers, health checks, and graceful shutdown.
+- Fixed gateway route selection so valid configured credentials reach authorized routes while unset credentials remain fail-closed.
+- Added engine, gateway, and listener tests and repaired Terraform VPC/lab module wiring.

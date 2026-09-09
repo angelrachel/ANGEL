@@ -14,4 +14,5 @@ module "vpc" {
 module "lab" {
   source = "./modules/lab"
   vpc_id = module.vpc.vpc_id
+  subnet_id = module.vpc.subnet_id
 }

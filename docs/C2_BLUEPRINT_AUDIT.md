@@ -18,8 +18,8 @@ No offensive capability was executed during this audit. The review was limited t
 | `go test ./...` | Passed |
 | `go vet ./...` | Passed |
 | Go package count under `src/c2` | 55 |
-| Go test files under `src/c2` | 8 |
-| C2 test coverage | Concentrated in evidence, orchestrator policy, report, API, crypto, database, and task stores; most assessment modules have no tests |
+| Go test files under `src/c2` | 11 |
+| C2 test coverage | Concentrated in engine, gateway, listener, evidence, orchestrator policy, report, API, crypto, database, and task stores; most assessment modules have no tests |
 | Blueprint path comparison | Many blueprint paths have no exact repository match |
 | Duplicate basename review | Many repeated names are platform/package variants; they are not identical-file duplicates by themselves |
 
@@ -48,6 +48,8 @@ The repository has a passing compile and vet baseline, but test coverage is unev
 - modules that invoke external commands but return a success status without propagating command errors;
 - module families with duplicate basenames across generic and platform-specific directories;
 - blueprint paths represented by filenames or skeletons without an integration test.
+
+The control-plane baseline now includes configurable host/port binding, bounded JSON framing, constant-time bearer authentication, request identity validation, security response headers, health checks, graceful shutdown deadlines, and fail-closed gateway route tests. These improvements do not change the status of the high-risk modules listed above.
 
 ## Duplicate-file interpretation
 
