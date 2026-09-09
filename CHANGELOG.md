@@ -11,3 +11,4 @@
 - Removed the source-code default operator API key; `ANGEL_OPERATOR_KEY` is injected by the runtime and authentication fails closed when absent.
 - Added bounded JSON request decoding, strict JSON fields, and method checks to control-plane endpoints.
 - Fixed IPv6 endpoint formatting in the TCP/UDP inventory scanner.
+- Added a fail-closed engagement scope and approval gate with unit coverage.

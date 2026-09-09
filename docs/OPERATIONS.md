@@ -12,6 +12,10 @@ Run the test suite and security checks before deployment. Inject `ANGEL_OPERATOR
 
 Create the scope with exact hosts and paths. Create an auditable assessment plan using only passive or simulation mode. Review the checks and requester identity before execution. Store captured metadata through the evidence chain after redaction. Generate findings with conservative severity and link every claim to an evidence reference.
 
+The Go package `src/c2/orchestrator` provides an authorization gate for this workflow. A request is allowed only when the engagement is marked authorized, the Rules of Engagement identifier and validity window are present, the requester is identified, the target and technique are allowlisted, and active actions carry an explicit approval ID. Integrate `EngagementScope.Authorize` before dispatching any assessment or simulator task; do not bypass it in adapters.
+
+The remaining integration work is intentionally repository-owner work: persist scopes and approvals in the selected database, bind approvals to authenticated operator identities, append allow/deny decisions to the evidence ledger, and connect the gate to every dispatch path. Until those integrations are complete, the scope type is a tested policy primitive rather than a claim of end-to-end enforcement.
+
 ## Evidence handling
 
 Export the evidence chain and its manifest together. Verify sequence numbers, parent links, record hashes, and timestamps before sharing it; a failed verification is an incident, not a recoverable warning. Store backups with restricted permissions and apply the documented retention period. Treat the SQLite database, reports, and manifests as sensitive engagement artifacts.
