@@ -49,7 +49,25 @@ func TestControlPlaneHTTPIntegration(t *testing.T) {
 		t.Fatalf("metrics status=%d", response.StatusCode)
 	}
 	response.Body.Close()
-	request, _ := http.NewRequest(http.MethodGet, base+"/api/v1/checks", nil)
+	request, _ := http.NewRequest(http.MethodGet, base+"/api/v1/platform", nil)
+	request.Header.Set("Authorization", "Bearer integration-secret")
+	response, err = client.Do(request)
+	if err != nil || response.StatusCode != http.StatusOK {
+		if response != nil {
+			response.Body.Close()
+		}
+		t.Fatalf("platform manifest status=%v err=%v", response, err)
+	}
+	var manifest struct {
+		Name   string   `json:"name"`
+		Layers []string `json:"layers"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&manifest); err != nil || manifest.Name != "ANGEL" || len(manifest.Layers) != 25 {
+		response.Body.Close()
+		t.Fatalf("invalid platform manifest: %#v err=%v", manifest, err)
+	}
+	response.Body.Close()
+	request, _ = http.NewRequest(http.MethodGet, base+"/api/v1/checks", nil)
 	request.Header.Set("Authorization", "Bearer integration-secret")
 	response, err = client.Do(request)
 	if err != nil {
@@ -103,6 +121,29 @@ func TestControlPlaneHTTPIntegration(t *testing.T) {
 		t.Fatalf("execution status=%d", response.StatusCode)
 	}
 	response.Body.Close()
+	reportResponse := doJSON(t, client, base+"/api/v1/reports", http.MethodPost, `{"engagement_id":"integration-eng","finding_ids":[]}`, "Bearer integration-secret")
+	if reportResponse.StatusCode != http.StatusCreated {
+		reportResponse.Body.Close()
+		t.Fatalf("report status=%d", reportResponse.StatusCode)
+	}
+	var report struct {
+		ID string `json:"id"`
+	}
+	if err := json.NewDecoder(reportResponse.Body).Decode(&report); err != nil || report.ID == "" {
+		reportResponse.Body.Close()
+		t.Fatalf("invalid report: %#v err=%v", report, err)
+	}
+	reportResponse.Body.Close()
+	artifactRequest, _ := http.NewRequest(http.MethodGet, base+"/api/v1/reports/artifact?id="+report.ID+"&format=html", nil)
+	artifactRequest.Header.Set("Authorization", "Bearer integration-secret")
+	artifactResponse, err := client.Do(artifactRequest)
+	if err != nil || artifactResponse.StatusCode != http.StatusOK || artifactResponse.Header.Get("X-ANGEL-Artifact-SHA256") == "" {
+		if artifactResponse != nil {
+			artifactResponse.Body.Close()
+		}
+		t.Fatalf("artifact status=%v err=%v", artifactResponse, err)
+	}
+	artifactResponse.Body.Close()
 	request, _ = http.NewRequest(http.MethodGet, base+"/api/v1/audit/verify", nil)
 	request.Header.Set("Authorization", "Bearer integration-secret")
 	response, err = client.Do(request)
