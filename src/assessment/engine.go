@@ -17,6 +17,7 @@ import (
 	"syscall"
 	"time"
 
+	"ANGEL/src/assessment/checks"
 	"ANGEL/src/assessment/control"
 	"ANGEL/src/assessment/domain"
 	"ANGEL/src/assessment/plugins"
@@ -171,6 +172,17 @@ func (e *Engine) Start(ctx context.Context) error {
 			return
 		}
 		writeJSON(w, http.StatusOK, plugins.Catalog())
+	})
+	mux.HandleFunc("/api/v1/checks", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if err := e.auth(r); err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		writeJSON(w, http.StatusOK, checks.IDs())
 	})
 	mux.HandleFunc("/api/v1/engagements", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
