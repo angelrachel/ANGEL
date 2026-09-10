@@ -1,4 +1,4 @@
-.PHONY: fmt test vet build check inventory static-check safe-contracts frontend-build gateway-test planner-test lab-check lab-smoke app-check validate
+.PHONY: fmt test vet build check inventory static-check safe-contracts frontend-build gateway-test planner-test lab-check lab-smoke lab-control app-check validate
 
 fmt:
 	files="$$(gofmt -l .)"; test -z "$$files" || gofmt -w $$files
@@ -36,7 +36,10 @@ lab-check:
 lab-smoke:
 	bash lab/acceptance/p0_fixture_http.sh
 
-app-check: frontend-build gateway-test planner-test lab-check lab-smoke
+lab-control:
+	bash lab/acceptance/p0_control_plane.sh
+
+app-check: frontend-build gateway-test planner-test lab-check lab-smoke lab-control
 
 validate: check inventory static-check safe-contracts
 	bash -n deploy/scripts/deploy.sh deploy/scripts/destroy.sh deploy/scripts/validate.sh
