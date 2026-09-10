@@ -26,6 +26,7 @@ import (
 	"ANGEL/src/assessment/plugins"
 	"ANGEL/src/assessment/policy"
 	"ANGEL/src/assessment/reporting"
+	"ANGEL/src/assessment/risk"
 )
 
 type Agent struct {
@@ -71,6 +72,7 @@ type Engine struct {
 	findings       map[string]reporting.Finding
 	reports        map[string]reporting.Report
 	audit          *governance.AuditLog
+	remediation    *risk.Tracker
 }
 
 func NewEngine() *Engine {
@@ -98,6 +100,7 @@ func NewEngine() *Engine {
 		findings:       make(map[string]reporting.Finding),
 		reports:        make(map[string]reporting.Report),
 		audit:          governance.NewAuditLog(),
+		remediation:    risk.NewTracker(),
 	}
 }
 
@@ -393,6 +396,56 @@ func (e *Engine) Start(ctx context.Context) error {
 		e.mu.Unlock()
 		e.audit.Append("operator", "REPORT_GENERATED", "report", report.ID, report.GeneratedAt)
 		writeJSON(w, http.StatusCreated, report)
+	})
+	mux.HandleFunc("/api/v1/evidence", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if err := e.auth(r); err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		e.mu.RLock()
+		items := make([]evidence.Bundle, 0, len(e.evidence))
+		for _, item := range e.evidence {
+			safe := item
+			safe.Payload = nil
+			items = append(items, safe)
+		}
+		e.mu.RUnlock()
+		writeJSON(w, http.StatusOK, items)
+	})
+	mux.HandleFunc("/api/v1/remediations", func(w http.ResponseWriter, r *http.Request) {
+		if err := e.auth(r); err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		if r.Method == http.MethodGet {
+			writeJSON(w, http.StatusOK, e.remediation.List())
+			return
+		}
+		if r.Method == http.MethodPost {
+			var request struct {
+				FindingID string    `json:"finding_id"`
+				Owner     string    `json:"owner"`
+				Plan      string    `json:"plan"`
+				DueAt     time.Time `json:"due_at"`
+			}
+			if err := decodeJSON(w, r, &request); err != nil {
+				http.Error(w, "invalid remediation contract", http.StatusBadRequest)
+				return
+			}
+			item, err := e.remediation.Create(request.FindingID, request.Owner, request.Plan, request.DueAt)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			e.audit.Append("operator", "REMEDIATION_CREATED", "remediation", item.ID, time.Now().UTC())
+			writeJSON(w, http.StatusCreated, item)
+			return
+		}
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	})
 	mux.HandleFunc("/api/v1/audit", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {

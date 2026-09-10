@@ -89,6 +89,29 @@ paths:
       responses:
         '200': { description: Finding list }
         '401': { description: Authentication required }
+  /api/v1/evidence:
+    get:
+      summary: List redacted evidence manifests
+      responses:
+        '200': { description: Evidence manifests }
+        '401': { description: Authentication required }
+  /api/v1/remediations:
+    get:
+      summary: List remediation plans
+      responses:
+        '200': { description: Remediation list }
+        '401': { description: Authentication required }
+    post:
+      summary: Create a remediation plan for a finding
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RemediationRequest'
+      responses:
+        '201': { description: Remediation created }
+        '400': { description: Invalid remediation contract }
   /api/v1/reports:
     get:
       summary: List integrity-protected reports
@@ -194,3 +217,11 @@ components:
       properties:
         engagement_id: { type: string }
         finding_ids: { type: array, items: { type: string } }
+    RemediationRequest:
+      type: object
+      required: [finding_id, owner, plan, due_at]
+      properties:
+        finding_id: { type: string }
+        owner: { type: string }
+        plan: { type: string }
+        due_at: { type: string, format: date-time }

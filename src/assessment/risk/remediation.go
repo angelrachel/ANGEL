@@ -91,3 +91,13 @@ func (t *Tracker) Get(id string) (Remediation, bool) {
 	r, ok := t.remediation[id]
 	return r, ok
 }
+
+func (t *Tracker) List() []Remediation {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	out := make([]Remediation, 0, len(t.remediation))
+	for _, item := range t.remediation {
+		out = append(out, item)
+	}
+	return out
+}
