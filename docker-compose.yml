@@ -8,6 +8,7 @@ services:
       ANGEL_HOST: 0.0.0.0
       ANGEL_PORT: 8001
       ANGEL_DATABASE: /data/angel.db
+      ANGEL_STATE_PATH: /data/angel-state.json
       ANGEL_OPERATOR_KEY: ${ANGEL_OPERATOR_KEY:?ANGEL_OPERATOR_KEY must be set}
       ANGEL_SHARED_KEY: ${ANGEL_SHARED_KEY:?ANGEL_SHARED_KEY must be set}
       ANGEL_AUTH_SECRET: ${ANGEL_AUTH_SECRET:?ANGEL_AUTH_SECRET must be set}

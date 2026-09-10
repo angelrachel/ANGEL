@@ -42,6 +42,29 @@ func NewController(p *policy.Engine) (*Controller, error) {
 	return &Controller{jobs: make(map[string]domain.AssessmentJob), policy: p, private: priv, public: pub}, nil
 }
 
+func NewControllerWithKeys(p *policy.Engine, private ed25519.PrivateKey, public ed25519.PublicKey) (*Controller, error) {
+	if len(private) != ed25519.PrivateKeySize || len(public) != ed25519.PublicKeySize {
+		return nil, fmt.Errorf("invalid controller key material")
+	}
+	return &Controller{jobs: make(map[string]domain.AssessmentJob), policy: p, private: append(ed25519.PrivateKey(nil), private...), public: append(ed25519.PublicKey(nil), public...)}, nil
+}
+
+func (c *Controller) KeyMaterial() (ed25519.PrivateKey, ed25519.PublicKey) {
+	return append(ed25519.PrivateKey(nil), c.private...), append(ed25519.PublicKey(nil), c.public...)
+}
+
+func (c *Controller) Restore(jobs []domain.AssessmentJob) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for _, job := range jobs {
+		if job.ID == "" || !c.Verify(job) {
+			return fmt.Errorf("invalid persisted job %s", job.ID)
+		}
+		c.jobs[job.ID] = job
+	}
+	return nil
+}
+
 func (c *Controller) PublicKey() ed25519.PublicKey {
 	return append(ed25519.PublicKey(nil), c.public...)
 }

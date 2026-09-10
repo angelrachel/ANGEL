@@ -34,6 +34,7 @@ import (
 	reportdoc "ANGEL/src/assessment/report"
 	"ANGEL/src/assessment/reporting"
 	"ANGEL/src/assessment/risk"
+	"ANGEL/src/assessment/storage"
 )
 
 type Agent struct {
@@ -83,19 +84,45 @@ type Engine struct {
 	limiter        *ratelimit.Limiter
 	snapshotSigner persistence.Signer
 	metrics        *metrics.Collector
+	durableState   *storage.FileStore
 }
 
 func NewEngine() *Engine {
 	policyEngine := policy.NewEngine()
-	jobController, err := control.NewController(policyEngine)
+	var durableState *storage.FileStore
+	var persisted storage.PersistentState
+	if path := strings.TrimSpace(os.Getenv("ANGEL_STATE_PATH")); path != "" {
+		var err error
+		durableState, persisted, err = storage.OpenFileStore(path)
+		if err != nil {
+			panic(err)
+		}
+	}
+	var jobController *control.Controller
+	var err error
+	if persisted.ControllerPrivate != "" && persisted.ControllerPublic != "" {
+		private, privateErr := hex.DecodeString(persisted.ControllerPrivate)
+		public, publicErr := hex.DecodeString(persisted.ControllerPublic)
+		if privateErr != nil || publicErr != nil {
+			panic("invalid persisted controller keys")
+		}
+		jobController, err = control.NewControllerWithKeys(policyEngine, private, public)
+	} else {
+		jobController, err = control.NewController(policyEngine)
+	}
 	if err != nil {
 		panic(err)
+	}
+	if len(persisted.Jobs) > 0 {
+		if err := jobController.Restore(persisted.Jobs); err != nil {
+			panic(err)
+		}
 	}
 	signer, err := evidence.NewSigner()
 	if err != nil {
 		panic(err)
 	}
-	return &Engine{
+	engine := &Engine{
 		agents:         make(map[string]*Agent),
 		tasks:          make(map[string]*Task),
 		results:        make(map[string]*Result),
@@ -119,8 +146,22 @@ func NewEngine() *Engine {
 			}
 			return signer
 		}(),
-		metrics: metrics.New(),
+		metrics:      metrics.New(),
+		durableState: durableState,
 	}
+	for _, item := range persisted.Evidence {
+		engine.evidence[item.ID] = item
+	}
+	for _, item := range persisted.Findings {
+		engine.findings[item.ID] = item
+	}
+	for _, item := range persisted.Reports {
+		engine.reports[item.ID] = item
+	}
+	if durableState != nil {
+		engine.persistState()
+	}
+	return engine
 }
 
 func envOr(name, fallback string) string {
@@ -136,6 +177,14 @@ func envPort(name string, fallback int) int {
 		return fallback
 	}
 	return value
+}
+
+func queryInt(value string) int {
+	parsed, err := strconv.Atoi(strings.TrimSpace(value))
+	if err != nil || parsed < 0 {
+		return 0
+	}
+	return parsed
 }
 
 func (e *Engine) address() string {
@@ -366,6 +415,7 @@ func (e *Engine) Start(ctx context.Context) error {
 			http.Error(w, err.Error(), http.StatusForbidden)
 			return
 		}
+		e.persistState()
 		writeJSON(w, http.StatusAccepted, job)
 	})
 	mux.HandleFunc("/api/v1/jobs", func(w http.ResponseWriter, r *http.Request) {
@@ -377,7 +427,13 @@ func (e *Engine) Start(ctx context.Context) error {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
-		writeJSON(w, http.StatusOK, e.jobController.List())
+		writeJSON(w, http.StatusOK, storage.QueryJobs(e.jobController.List(), storage.JobQuery{
+			EngagementID: r.URL.Query().Get("engagement_id"),
+			Status:       r.URL.Query().Get("status"),
+			Target:       r.URL.Query().Get("target"),
+			Page:         queryInt(r.URL.Query().Get("page")),
+			PageSize:     queryInt(r.URL.Query().Get("page_size")),
+		}))
 	})
 	mux.HandleFunc("/api/v1/executions", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -426,6 +482,7 @@ func (e *Engine) Start(ctx context.Context) error {
 		_ = e.jobController.Transition(job.ID, control.Running, output.CollectedAt)
 		_ = e.jobController.Transition(job.ID, control.Completed, output.CollectedAt)
 		e.audit.Append("operator", "EXECUTION_COMPLETED", "job", job.ID, output.CollectedAt)
+		e.persistState()
 		writeJSON(w, http.StatusCreated, map[string]any{"output": output, "evidence": bundle, "finding": finding})
 	})
 	mux.HandleFunc("/api/v1/findings", func(w http.ResponseWriter, r *http.Request) {
@@ -492,6 +549,7 @@ func (e *Engine) Start(ctx context.Context) error {
 		e.reports[report.ID] = report
 		e.mu.Unlock()
 		e.audit.Append("operator", "REPORT_GENERATED", "report", report.ID, report.GeneratedAt)
+		e.persistState()
 		writeJSON(w, http.StatusCreated, report)
 	})
 	mux.HandleFunc("/api/v1/reports/artifact", func(w http.ResponseWriter, r *http.Request) {
