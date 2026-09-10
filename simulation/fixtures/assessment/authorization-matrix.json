@@ -1,0 +1,1 @@
+[{"subject":"analyst","resource":"fixture://lab/report","action":"read","expected":"allow","actual":200},{"subject":"analyst","resource":"fixture://lab/admin","action":"read","expected":"deny","actual":403},{"subject":"service","resource":"fixture://lab/report","action":"write","expected":"deny","actual":403}]

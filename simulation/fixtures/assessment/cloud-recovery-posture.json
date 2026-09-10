@@ -1,0 +1,1 @@
+{"cloud":{"public_access":false,"mfa_required":true,"encryption_enabled":true,"audit_enabled":true},"recovery":{"restore_verified":true,"rto_minutes":30,"rpo_minutes":15}}

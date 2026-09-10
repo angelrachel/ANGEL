@@ -1,0 +1,1 @@
+{"id":"fixture-security-headers","target":"fixture://lab/web","headers":{"Content-Security-Policy":"default-src 'self'","X-Content-Type-Options":"nosniff","Referrer-Policy":"no-referrer","Strict-Transport-Security":"max-age=31536000"},"expected":{"check_id":"web-security-headers","passed":true}}
