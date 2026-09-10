@@ -38,6 +38,16 @@ paths:
       responses:
         '200': { description: Platform identity, layer count, and denied capabilities }
         '401': { description: Authentication required }
+  /api/v1/reports/artifact:
+    get:
+      summary: Render a stored report as JSON, Markdown, or HTML
+      parameters:
+        - { name: id, in: query, required: true, schema: { type: string } }
+        - { name: format, in: query, required: true, schema: { type: string, enum: [json, markdown, html] } }
+      responses:
+        '200': { description: Rendered report artifact with SHA-256 response header }
+        '400': { description: Unsupported format }
+        '404': { description: Report not found }
   /api/v1/checks:
     get:
       summary: List executable assessment checks

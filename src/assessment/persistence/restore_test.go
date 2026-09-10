@@ -17,7 +17,15 @@ func TestRestoreValidatesSignedSnapshot(t *testing.T) {
 	}
 	audit := governance.NewAuditLog()
 	audit.Append("operator", "SNAPSHOT", "snapshot", "s-1", time.Now())
-	snapshot, err := Create(Snapshot{Version: 1, Engagements: []domain.Engagement{{ID: "eng-1"}}, Jobs: []domain.AssessmentJob{{ID: "job-1"}}, Findings: []reporting.Finding{{ID: "finding-1"}}, Evidence: []evidence.Bundle{{ID: "evidence-1", SHA256: "0123456789012345678901234567890123456789012345678901234567890123"}}, Audit: audit.List()}, signer)
+	evidenceSigner, err := evidence.NewSigner()
+	if err != nil {
+		t.Fatal(err)
+	}
+	bundle, err := evidence.CreateBundle("eng-1", "job-1", "application/json", []byte(`{"ok":true}`), "0", true, time.Now().UTC(), evidenceSigner)
+	if err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := Create(Snapshot{Version: 1, Engagements: []domain.Engagement{{ID: "eng-1"}}, Jobs: []domain.AssessmentJob{{ID: "job-1"}}, Findings: []reporting.Finding{{ID: "finding-1"}}, Evidence: []evidence.Bundle{bundle}, Audit: audit.List()}, signer)
 	if err != nil {
 		t.Fatal(err)
 	}

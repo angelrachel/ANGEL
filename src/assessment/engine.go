@@ -31,6 +31,7 @@ import (
 	"ANGEL/src/assessment/policy"
 	"ANGEL/src/assessment/query"
 	"ANGEL/src/assessment/ratelimit"
+	reportdoc "ANGEL/src/assessment/report"
 	"ANGEL/src/assessment/reporting"
 	"ANGEL/src/assessment/risk"
 )
@@ -492,6 +493,39 @@ func (e *Engine) Start(ctx context.Context) error {
 		e.mu.Unlock()
 		e.audit.Append("operator", "REPORT_GENERATED", "report", report.ID, report.GeneratedAt)
 		writeJSON(w, http.StatusCreated, report)
+	})
+	mux.HandleFunc("/api/v1/reports/artifact", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if err := e.auth(r); err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		id := strings.TrimSpace(r.URL.Query().Get("id"))
+		format := strings.TrimSpace(r.URL.Query().Get("format"))
+		e.mu.RLock()
+		stored, ok := e.reports[id]
+		e.mu.RUnlock()
+		if !ok {
+			http.Error(w, "report not found", http.StatusNotFound)
+			return
+		}
+		findings := make([]reportdoc.Finding, 0, len(stored.Findings))
+		for _, finding := range stored.Findings {
+			findings = append(findings, reportdoc.Finding{Title: finding.Title, Severity: finding.Severity, Description: finding.Summary, Evidence: strings.Join(finding.EvidenceIDs, ", ")})
+		}
+		document := reportdoc.Report{ID: stored.ID, Title: "ANGEL Security Validation Report", StartTime: stored.GeneratedAt.Format(time.RFC3339), EndTime: stored.GeneratedAt.Format(time.RFC3339), Findings: findings}
+		artifact, err := reportdoc.RenderArtifact(document, format)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("Content-Type", artifact.ContentType)
+		w.Header().Set("X-ANGEL-Artifact-SHA256", artifact.SHA256)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(artifact.Body)
 	})
 	mux.HandleFunc("/api/v1/evidence", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {

@@ -1,6 +1,8 @@
 package persistence
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"sort"
 	"strings"
@@ -40,6 +42,10 @@ func Validate(snapshot Snapshot, publicKey []byte, policy RestorePolicy) (Restor
 		for _, item := range snapshot.Evidence {
 			if strings.TrimSpace(item.SHA256) == "" || len(item.SHA256) != 64 {
 				return RestoreResult{}, fmt.Errorf("evidence hash is incomplete")
+			}
+			hash := sha256.Sum256(item.Payload)
+			if hex.EncodeToString(hash[:]) != item.SHA256 || item.ID != hex.EncodeToString(hash[:])[:24] {
+				return RestoreResult{}, fmt.Errorf("evidence payload hash mismatch")
 			}
 		}
 	}
