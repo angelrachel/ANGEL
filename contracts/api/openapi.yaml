@@ -68,6 +68,11 @@ paths:
         '404': { description: Check not found }
         '401': { description: Authentication required }
   /api/v1/engagements:
+    get:
+      summary: List durable engagement policy state
+      responses:
+        '200': { description: Engagement scope and budget state }
+        '401': { description: Authentication required }
     post:
       summary: Register an authorized engagement and scope
       requestBody:
@@ -135,6 +140,12 @@ paths:
   /api/v1/evidence:
     get:
       summary: List redacted evidence manifests
+      parameters:
+        - { name: engagement_id, in: query, schema: { type: string } }
+        - { name: job_id, in: query, schema: { type: string } }
+        - { name: content_type, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: page_size, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
       responses:
         '200': { description: Evidence manifests }
         '401': { description: Authentication required }
@@ -204,6 +215,10 @@ paths:
   /api/v1/reports:
     get:
       summary: List integrity-protected reports
+      parameters:
+        - { name: engagement_id, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: page_size, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
       responses:
         '200': { description: Report list }
     post:
