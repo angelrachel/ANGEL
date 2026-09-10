@@ -174,6 +174,27 @@ func (e *Engine) Start(ctx context.Context) error {
 		writeJSON(w, http.StatusOK, plugins.Catalog())
 	})
 	mux.HandleFunc("/api/v1/checks", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			if err := e.auth(r); err != nil {
+				http.Error(w, err.Error(), http.StatusUnauthorized)
+				return
+			}
+			var request struct {
+				CheckID string         `json:"check_id"`
+				Input   checks.Request `json:"input"`
+			}
+			if err := decodeJSON(w, r, &request); err != nil {
+				http.Error(w, "invalid check evaluation contract", http.StatusBadRequest)
+				return
+			}
+			check, ok := checks.Find(request.CheckID)
+			if !ok {
+				http.Error(w, "check not found", http.StatusNotFound)
+				return
+			}
+			writeJSON(w, http.StatusOK, check.Evaluate(request.Input))
+			return
+		}
 		if r.Method != http.MethodGet {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return

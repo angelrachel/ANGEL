@@ -25,6 +25,19 @@ paths:
       responses:
         '200': { description: Check registry }
         '401': { description: Authentication required }
+    post:
+      summary: Evaluate one registered assessment check
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckEvaluationRequest'
+      responses:
+        '200': { description: Check result }
+        '400': { description: Invalid evaluation contract }
+        '404': { description: Check not found }
+        '401': { description: Authentication required }
   /api/v1/engagements:
     post:
       summary: Register an authorized engagement and scope
@@ -107,3 +120,18 @@ components:
         task_type: { type: string }
         target: { type: string }
         action: { type: string }
+    CheckEvaluationRequest:
+      type: object
+      required: [check_id, input]
+      properties:
+        check_id: { type: string }
+        input:
+          type: object
+          required: [id, target]
+          properties:
+            id: { type: string }
+            target: { type: string }
+            headers: { type: object, additionalProperties: { type: string } }
+            status_code: { type: integer }
+            body: { type: string }
+            metadata: { type: object, additionalProperties: { type: string } }
