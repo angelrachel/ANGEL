@@ -50,6 +50,9 @@ func (e *Engine) RegisterEngagement(eng domain.Engagement, scope []domain.ScopeE
 }
 
 func (e *Engine) Authorize(engagementID, target, action string, now time.Time) Decision {
+	if deniedCapability(action) {
+		return Decision{Reason: "capability is permanently denied by platform policy"}
+	}
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	eng, ok := e.engagements[engagementID]
@@ -130,8 +133,11 @@ func allowedTarget(target string, scopes []domain.ScopeEntry, action string) boo
 				return true
 			}
 		case "url":
-			if u, err := url.Parse(target); err == nil && strings.EqualFold(u.Hostname(), strings.TrimPrefix(value, "https://")) {
-				return true
+			if u, err := url.Parse(target); err == nil {
+				scoped, parseErr := url.Parse(value)
+				if parseErr == nil && strings.EqualFold(u.Scheme, scoped.Scheme) && strings.EqualFold(u.Hostname(), scoped.Hostname()) {
+					return true
+				}
 			}
 		case "cidr":
 			if ip := net.ParseIP(target); ip != nil {
@@ -147,4 +153,13 @@ func allowedTarget(target string, scopes []domain.ScopeEntry, action string) boo
 		}
 	}
 	return false
+}
+
+func deniedCapability(action string) bool {
+	switch strings.ToLower(strings.TrimSpace(action)) {
+	case "credential-collection", "credential-extraction", "persistence", "destructive-write", "log-deletion", "covert-channel", "process-injection", "evasion", "data-exfiltration", "arbitrary-command":
+		return true
+	default:
+		return false
+	}
 }
