@@ -2,7 +2,7 @@ FROM golang:1.27.1 AS builder
 WORKDIR /src
 COPY go.mod ./
 COPY src/ ./src/
-RUN CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o /out/angel-server ./src/c2
+RUN CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o /out/angel-server ./src/assessment
 
 FROM gcr.io/distroless/static-debian12:nonroot
 COPY --from=builder /out/angel-server /angel-server

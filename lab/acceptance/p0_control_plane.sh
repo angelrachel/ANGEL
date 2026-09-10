@@ -19,7 +19,7 @@ trap cleanup EXIT
 
 (
   cd "$root_dir"
-  go build -o "$binary_file" ./src/c2
+  go build -o "$binary_file" ./src/assessment
 )
 ANGEL_OPERATOR_KEY="$token" ANGEL_HOST=127.0.0.1 ANGEL_PORT="$port" "$binary_file" >"$log_file" 2>&1 &
 server_pid=$!

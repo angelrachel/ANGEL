@@ -266,7 +266,7 @@ func (e *Engine) Start(ctx context.Context) error {
 		defer cancel()
 		_ = e.httpSrv.Shutdown(shutdownCtx)
 	}()
-	fmt.Printf("[+] ANGEL C2 RUNNING ON %s\n", e.address())
+	fmt.Printf("[+] ANGEL ASSESSMENT CONTROL PLANE RUNNING ON %s\n", e.address())
 	if err := e.httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
