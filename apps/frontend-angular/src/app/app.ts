@@ -1,13 +1,15 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterOutlet } from '@angular/router';
-import { ApiService, AssessmentJob, Engagement, ModuleEntry, ScopeEntry } from './api.service';
+import { ApiService, AssessmentJob, Engagement, Finding, ModuleEntry, ScopeEntry } from './api.service';
 
 @Component({ selector: 'app-root', imports: [FormsModule, RouterOutlet], templateUrl: './app.html', styleUrl: './app.scss' })
 export class App {
   private readonly api = inject(ApiService);
   readonly modules = signal<ModuleEntry[]>([]);
   readonly jobs = signal<AssessmentJob[]>([]);
+  readonly findings = signal<Finding[]>([]);
+  readonly checks = signal<string[]>([]);
   readonly error = signal('');
   readonly notice = signal('');
   readonly connected = signal(false);
@@ -17,7 +19,7 @@ export class App {
   readonly readiness = computed(() => this.connected() && this.modules().length === 650);
 
   constructor() { this.refresh(); }
-  refresh(): void { this.error.set(''); this.api.health().subscribe({ next: () => { this.connected.set(true); this.api.modules().subscribe({ next: value => this.modules.set(value), error: err => this.error.set(err?.error ?? 'Module catalog unavailable') }); }, error: err => { this.connected.set(false); this.error.set(err?.error ?? 'Assessment API unavailable'); } }); }
+  refresh(): void { this.error.set(''); this.api.health().subscribe({ next: () => { this.connected.set(true); this.api.modules().subscribe({ next: value => this.modules.set(value), error: err => this.error.set(err?.error ?? 'Module catalog unavailable') }); this.api.checks().subscribe({ next: value => this.checks.set(value), error: () => undefined }); this.api.jobs().subscribe({ next: value => this.jobs.set(value), error: () => undefined }); this.api.findings().subscribe({ next: value => this.findings.set(value), error: () => undefined }); }, error: err => { this.connected.set(false); this.error.set(err?.error ?? 'Assessment API unavailable'); } }); }
   updateEngagement(field: keyof Engagement, value: string | boolean): void { this.engagement.update(current => ({ ...current, [field]: value } as Engagement)); }
   updateScope(field: keyof ScopeEntry, value: string): void { this.scope.update(current => ({ ...current, [field]: value } as ScopeEntry)); }
   updateJob(field: 'task_type' | 'target' | 'action', value: string): void { this.job.update(current => ({ ...current, [field]: value })); }

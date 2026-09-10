@@ -20,6 +20,8 @@
     </div>
     <aside class="stack"><section class="card"><div class="card-heading"><div><span class="eyebrow">CATALOG</span><h2>Registered modules</h2></div><span class="pill">650</span></div><div class="module-list">@for (module of modules().slice(0, 12); track module.id) { <div class="module"><span>{{ module.id }}</span><strong>{{ module.name }}</strong><small>L{{ module.layer }} · {{ module.capability }}</small></div> }</div></section>
       <section class="card"><div class="card-heading"><div><span class="eyebrow">QUEUE</span><h2>Recent jobs</h2></div></div>@if (jobs().length === 0) { <p class="muted">No jobs submitted in this session.</p> } @for (item of jobs(); track item.id) { <div class="job"><strong>{{ item.task_type }}</strong><span>{{ item.status }}</span><small>{{ item.target }}</small></div> }</section>
+      <section class="card"><div class="card-heading"><div><span class="eyebrow">FINDINGS</span><h2>Risk register</h2></div><span class="pill">{{ findings().length }}</span></div>@if (findings().length === 0) { <p class="muted">No findings recorded.</p> } @for (item of findings().slice(0, 8); track item.id) { <div class="job"><strong>{{ item.title }}</strong><span>{{ item.severity }}</span><small>{{ item.status }} · {{ item.target }}</small></div> }</section>
+      <section class="card"><div class="card-heading"><div><span class="eyebrow">CHECKS</span><h2>Executable checks</h2></div><span class="pill">{{ checks().length }}</span></div><div class="module-list">@for (check of checks().slice(0, 8); track check) { <div class="module"><strong>{{ check }}</strong><small>policy-gated safe adapter</small></div> }</div></section>
     </aside>
   </section><router-outlet />
 </main>
