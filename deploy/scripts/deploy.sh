@@ -18,5 +18,5 @@ terraform apply -input=false -auto-approve
 echo "[+] Waiting for lab control plane..."
 sleep 30
 cd ../ansible
-ansible-playbook -i inventories/production/hosts.ini playbooks/site.yml
+ansible-playbook -i inventories/lab/hosts.ini playbooks/site.yml
 printf '%s\n' '[+] Deployment complete'

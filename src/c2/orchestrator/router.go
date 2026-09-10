@@ -40,7 +40,7 @@ func (r *Router) Dispatch(task Task) Result {
 	if !exists {
 		return Result{TaskID: task.ID, Status: "error", Output: map[string]interface{}{"error": "agent not found"}}
 	}
-	return Result{TaskID: task.ID, Status: "success", Output: map[string]interface{}{"agent": agentName, "executed": true}}
+	return Result{TaskID: task.ID, Status: "accepted", Output: map[string]interface{}{"agent": agentName, "executed": false, "mode": "observe"}}
 }
 
 func (r *Router) GetAgentCount() int {

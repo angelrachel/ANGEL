@@ -1,7 +1,0 @@
-- hosts: all
-  become: yes
-  tasks:
-    - name: Configure logging
-      copy:
-        content: "ANGEL_LOG"
-        dest: /etc/angel.conf

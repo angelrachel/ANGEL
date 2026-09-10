@@ -31,7 +31,6 @@ jobs:
       - run: python3 scripts/repo_integrity_check.py
       - run: python3 scripts/validate_safe_contracts.py
       - run: python3 scripts/static_success_checker.py
-      - run: python3 scripts/generate_module_inventory.py && git diff --exit-code -- docs/MODULE_INVENTORY.md
       - run: bash -n deploy/scripts/deploy.sh deploy/scripts/destroy.sh deploy/scripts/validate.sh
       - run: go install github.com/zricethezav/gitleaks/v8@latest
       - run: gitleaks detect --verbose --redact

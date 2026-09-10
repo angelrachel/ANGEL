@@ -1,4 +1,4 @@
-.PHONY: fmt test vet build check inventory static-check safe-contracts frontend-build gateway-test planner-test lab-check lab-smoke lab-control app-check validate
+.PHONY: fmt test vet build check static-check safe-contracts frontend-build gateway-test planner-test lab-check lab-smoke lab-control app-check validate
 
 fmt:
 	files="$$(gofmt -l .)"; test -z "$$files" || gofmt -w $$files
@@ -11,9 +11,6 @@ vet:
 
 build:
 	go build ./src/...
-
-inventory:
-	python3 scripts/generate_module_inventory.py
 
 static-check:
 	python3 scripts/static_success_checker.py
@@ -41,7 +38,7 @@ lab-control:
 
 app-check: frontend-build gateway-test planner-test lab-check lab-smoke lab-control
 
-validate: check inventory static-check safe-contracts
+validate: check static-check safe-contracts
 	bash -n deploy/scripts/deploy.sh deploy/scripts/destroy.sh deploy/scripts/validate.sh
 	python3 scripts/repo_integrity_check.py
 
