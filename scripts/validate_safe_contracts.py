@@ -58,6 +58,7 @@ def validate_capability_policy(policy: dict, schema: dict) -> None:
 def main() -> int:
     openapi = (ROOT / "contracts/api/openapi.yaml").read_text(encoding="utf-8")
     require("/healthz:" in openapi, "OpenAPI health path is missing")
+    require("/api/v1/platform:" in openapi, "OpenAPI platform manifest path is missing")
     require("/v1/simulation/tasks:" in openapi, "OpenAPI simulation path is missing")
     task = load_json(ROOT / "simulation/fixtures/tasks/recon-http.json")
     result = load_json(ROOT / "simulation/fixtures/reports/recon-http-result.json")

@@ -25,6 +25,14 @@ func TestControllerCreatesSignedJobAndTransitions(t *testing.T) {
 	if job.Signature == "" {
 		t.Fatal("job signature missing")
 	}
+	if !controller.Verify(job) {
+		t.Fatal("valid job signature rejected")
+	}
+	tampered := job
+	tampered.Target = "fixture://lab/other"
+	if controller.Verify(tampered) {
+		t.Fatal("tampered job signature accepted")
+	}
 	for _, state := range []string{Approved, Queued, Running, Completed} {
 		if err := controller.Transition(job.ID, state, now); err != nil {
 			t.Fatalf("transition %s: %v", state, err)

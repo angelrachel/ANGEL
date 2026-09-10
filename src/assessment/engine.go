@@ -26,6 +26,7 @@ import (
 	"ANGEL/src/assessment/governance"
 	"ANGEL/src/assessment/metrics"
 	"ANGEL/src/assessment/persistence"
+	"ANGEL/src/assessment/platform"
 	"ANGEL/src/assessment/plugins"
 	"ANGEL/src/assessment/policy"
 	"ANGEL/src/assessment/query"
@@ -268,6 +269,22 @@ func (e *Engine) Start(ctx context.Context) error {
 		}
 		writeJSON(w, http.StatusOK, plugins.Catalog())
 	})
+	mux.HandleFunc("/api/v1/platform", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if err := e.auth(r); err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		manifest := platform.Current()
+		if err := manifest.Validate(); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		writeJSON(w, http.StatusOK, manifest)
+	})
 	mux.HandleFunc("/api/v1/checks", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			if err := e.auth(r); err != nil {
@@ -378,6 +395,10 @@ func (e *Engine) Start(ctx context.Context) error {
 		job, ok := e.jobController.Get(input.JobID)
 		if !ok {
 			http.Error(w, "job not found", http.StatusNotFound)
+			return
+		}
+		if !e.jobController.Verify(job) {
+			http.Error(w, "job signature verification failed", http.StatusForbidden)
 			return
 		}
 		if job.Target != input.Target {

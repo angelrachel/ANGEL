@@ -46,6 +46,24 @@ func (c *Controller) PublicKey() ed25519.PublicKey {
 	return append(ed25519.PublicKey(nil), c.public...)
 }
 
+// Verify confirms that a job was signed by this controller and that its
+// serialized fields have not changed since it was issued.
+func (c *Controller) Verify(job domain.AssessmentJob) bool {
+	signature, err := hex.DecodeString(strings.TrimSpace(job.Signature))
+	if err != nil || len(signature) != ed25519.SignatureSize {
+		return false
+	}
+	job.Signature = ""
+	job.Status = Created
+	job.StartedAt = time.Time{}
+	job.FinishedAt = time.Time{}
+	payload, err := json.Marshal(job)
+	if err != nil {
+		return false
+	}
+	return ed25519.Verify(c.public, payload, signature)
+}
+
 func (c *Controller) Create(engagementID, taskType, target, action string, now time.Time) (domain.AssessmentJob, error) {
 	if strings.TrimSpace(taskType) == "" {
 		return domain.AssessmentJob{}, fmt.Errorf("task type is required")

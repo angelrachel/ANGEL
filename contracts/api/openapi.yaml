@@ -32,6 +32,12 @@ paths:
       responses:
         '200': { description: Module catalog }
         '401': { description: Authentication required }
+  /api/v1/platform:
+    get:
+      summary: Return ANGEL platform manifest and safety boundary
+      responses:
+        '200': { description: Platform identity, layer count, and denied capabilities }
+        '401': { description: Authentication required }
   /api/v1/checks:
     get:
       summary: List executable assessment checks

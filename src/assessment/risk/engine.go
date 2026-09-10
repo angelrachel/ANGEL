@@ -1,6 +1,8 @@
 package risk
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"strings"
 
@@ -62,9 +64,22 @@ func Finding(title, impact, remediation string, assets, evidence []string, in In
 	if err != nil {
 		return domain.Finding{}, Result{}, err
 	}
-	finding := domain.Finding{Title: strings.TrimSpace(title), Severity: result.Severity, Confidence: result.Confidence, AffectedAssets: assets, Impact: impact, EvidenceIDs: evidence, Remediation: remediation, Status: "OPEN"}
-	if finding.Title == "" {
+	title = strings.TrimSpace(title)
+	impact = strings.TrimSpace(impact)
+	remediation = strings.TrimSpace(remediation)
+	if title == "" {
 		return domain.Finding{}, Result{}, fmt.Errorf("finding title is required")
 	}
+	if impact == "" || remediation == "" {
+		return domain.Finding{}, Result{}, fmt.Errorf("finding impact and remediation are required")
+	}
+	if len(assets) == 0 || len(evidence) == 0 {
+		return domain.Finding{}, Result{}, fmt.Errorf("finding requires affected assets and evidence")
+	}
+	if (result.Severity == "P0" || result.Severity == "P1") && result.Confidence < .85 {
+		return domain.Finding{}, Result{}, fmt.Errorf("high severity finding requires confidence of at least 0.85")
+	}
+	identity := sha256.Sum256([]byte(title + "|" + strings.Join(assets, ",") + "|" + strings.Join(evidence, ",")))
+	finding := domain.Finding{ID: hex.EncodeToString(identity[:])[:24], Title: title, Severity: result.Severity, Confidence: result.Confidence, AffectedAssets: append([]string(nil), assets...), Impact: impact, EvidenceIDs: append([]string(nil), evidence...), Remediation: remediation, Status: "OPEN"}
 	return finding, result, nil
 }
