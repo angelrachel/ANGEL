@@ -25,6 +25,7 @@ import (
 	"ANGEL/src/assessment/governance"
 	"ANGEL/src/assessment/plugins"
 	"ANGEL/src/assessment/policy"
+	"ANGEL/src/assessment/ratelimit"
 	"ANGEL/src/assessment/reporting"
 	"ANGEL/src/assessment/risk"
 )
@@ -73,6 +74,7 @@ type Engine struct {
 	reports        map[string]reporting.Report
 	audit          *governance.AuditLog
 	remediation    *risk.Tracker
+	limiter        *ratelimit.Limiter
 }
 
 func NewEngine() *Engine {
@@ -101,6 +103,7 @@ func NewEngine() *Engine {
 		reports:        make(map[string]reporting.Report),
 		audit:          governance.NewAuditLog(),
 		remediation:    risk.NewTracker(),
+		limiter:        ratelimit.New(20, 40),
 	}
 }
 
@@ -135,6 +138,11 @@ func (e *Engine) auth(r *http.Request) error {
 	provided := strings.TrimSpace(strings.TrimPrefix(token, prefix))
 	if provided == "" || subtle.ConstantTimeCompare([]byte(provided), []byte(e.apiKey)) != 1 {
 		return errors.New("invalid token")
+	}
+	if e.limiter != nil {
+		if err := e.limiter.Allow(clientIP(r.RemoteAddr), time.Now().UTC()); err != nil {
+			return err
+		}
 	}
 	return nil
 }
