@@ -121,6 +121,25 @@ func TestControlPlaneHTTPIntegration(t *testing.T) {
 		t.Fatalf("execution status=%d", response.StatusCode)
 	}
 	response.Body.Close()
+	request, _ = http.NewRequest(http.MethodGet, base+"/api/v1/observations?job_id="+job.ID+"&page=1&page_size=10", nil)
+	request.Header.Set("Authorization", "Bearer integration-secret")
+	response, err = client.Do(request)
+	if err != nil || response.StatusCode != http.StatusOK {
+		if response != nil {
+			response.Body.Close()
+		}
+		t.Fatalf("observations status=%v err=%v", response, err)
+	}
+	var observations struct {
+		Items []struct {
+			JobID string `json:"job_id"`
+		} `json:"items"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&observations); err != nil || len(observations.Items) != 1 || observations.Items[0].JobID != job.ID {
+		response.Body.Close()
+		t.Fatalf("invalid observations: %#v err=%v", observations, err)
+	}
+	response.Body.Close()
 	reportResponse := doJSON(t, client, base+"/api/v1/reports", http.MethodPost, `{"engagement_id":"integration-eng","finding_ids":[]}`, "Bearer integration-secret")
 	if reportResponse.StatusCode != http.StatusCreated {
 		reportResponse.Body.Close()

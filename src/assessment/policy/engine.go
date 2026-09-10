@@ -16,6 +16,13 @@ type Decision struct {
 	Reason  string `json:"reason"`
 }
 
+type SnapshotEntry struct {
+	Engagement domain.Engagement   `json:"engagement"`
+	Scope      []domain.ScopeEntry `json:"scope"`
+	Budget     int                 `json:"budget"`
+	Used       int                 `json:"used"`
+}
+
 type Engine struct {
 	mu          sync.RWMutex
 	engagements map[string]domain.Engagement
@@ -28,7 +35,45 @@ func NewEngine() *Engine {
 	return &Engine{engagements: make(map[string]domain.Engagement), scopes: make(map[string][]domain.ScopeEntry), budgets: make(map[string]int), used: make(map[string]int)}
 }
 
+func (e *Engine) Snapshot() []SnapshotEntry {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	out := make([]SnapshotEntry, 0, len(e.engagements))
+	for id, engagement := range e.engagements {
+		out = append(out, SnapshotEntry{Engagement: engagement, Scope: append([]domain.ScopeEntry(nil), e.scopes[id]...), Budget: e.budgets[id], Used: e.used[id]})
+	}
+	return out
+}
+
+func (e *Engine) Restore(entries []SnapshotEntry) error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	for _, entry := range entries {
+		if err := validateEngagement(entry.Engagement, entry.Scope, entry.Budget); err != nil {
+			return err
+		}
+		if entry.Used < 0 || entry.Used > entry.Budget {
+			return fmt.Errorf("invalid used budget for engagement %s", entry.Engagement.ID)
+		}
+		e.engagements[entry.Engagement.ID] = entry.Engagement
+		e.scopes[entry.Engagement.ID] = append([]domain.ScopeEntry(nil), entry.Scope...)
+		e.budgets[entry.Engagement.ID] = entry.Budget
+		e.used[entry.Engagement.ID] = entry.Used
+	}
+	return nil
+}
+
 func (e *Engine) RegisterEngagement(eng domain.Engagement, scope []domain.ScopeEntry, budget int) error {
+	if err := validateEngagement(eng, scope, budget); err != nil {
+		return err
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.engagements[eng.ID], e.scopes[eng.ID], e.budgets[eng.ID] = eng, append([]domain.ScopeEntry(nil), scope...), budget
+	return nil
+}
+
+func validateEngagement(eng domain.Engagement, scope []domain.ScopeEntry, budget int) error {
 	if strings.TrimSpace(eng.ID) == "" || strings.TrimSpace(eng.Organization) == "" {
 		return fmt.Errorf("engagement id and organization are required")
 	}
@@ -43,9 +88,30 @@ func (e *Engine) RegisterEngagement(eng domain.Engagement, scope []domain.ScopeE
 			return err
 		}
 	}
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	e.engagements[eng.ID], e.scopes[eng.ID], e.budgets[eng.ID] = eng, append([]domain.ScopeEntry(nil), scope...), budget
+	return nil
+}
+
+func validateScope(item domain.ScopeEntry) error {
+	if strings.TrimSpace(item.Value) == "" || strings.TrimSpace(item.Kind) == "" {
+		return fmt.Errorf("scope kind and value are required")
+	}
+	if item.Kind == "url" {
+		u, err := url.Parse(item.Value)
+		if err != nil || u.Hostname() == "" || (u.Scheme != "https" && u.Scheme != "http") {
+			return fmt.Errorf("invalid scoped url")
+		}
+	}
+	if item.Kind == "cidr" {
+		if _, _, err := net.ParseCIDR(item.Value); err != nil {
+			return fmt.Errorf("invalid scoped cidr")
+		}
+	}
+	if item.Excluded {
+		return nil
+	}
+	if len(item.Actions) == 0 {
+		return fmt.Errorf("scope must declare allowed actions")
+	}
 	return nil
 }
 
@@ -81,30 +147,6 @@ func (e *Engine) Stop(engagementID string) {
 	eng := e.engagements[engagementID]
 	eng.Stopped = true
 	e.engagements[engagementID] = eng
-}
-
-func validateScope(item domain.ScopeEntry) error {
-	if strings.TrimSpace(item.Value) == "" || strings.TrimSpace(item.Kind) == "" {
-		return fmt.Errorf("scope kind and value are required")
-	}
-	if item.Kind == "url" {
-		u, err := url.Parse(item.Value)
-		if err != nil || u.Hostname() == "" || (u.Scheme != "https" && u.Scheme != "http") {
-			return fmt.Errorf("invalid scoped url")
-		}
-	}
-	if item.Kind == "cidr" {
-		if _, _, err := net.ParseCIDR(item.Value); err != nil {
-			return fmt.Errorf("invalid scoped cidr")
-		}
-	}
-	if item.Excluded {
-		return nil
-	}
-	if len(item.Actions) == 0 {
-		return fmt.Errorf("scope must declare allowed actions")
-	}
-	return nil
 }
 
 func allowedTarget(target string, scopes []domain.ScopeEntry, action string) bool {
@@ -173,7 +215,6 @@ func hostnameMatches(target, scoped string) bool {
 	suffix := strings.TrimPrefix(scoped, "*.")
 	return strings.HasSuffix(target, "."+suffix) && target != suffix
 }
-
 func pathMatches(target, scoped string) bool {
 	scoped = strings.TrimSpace(scoped)
 	if scoped == "" || scoped == "/" {
@@ -183,7 +224,6 @@ func pathMatches(target, scoped string) bool {
 	scoped = "/" + strings.TrimPrefix(scoped, "/")
 	return target == scoped || strings.HasPrefix(target, strings.TrimSuffix(scoped, "/")+"/")
 }
-
 func portMatches(target string, allowed []int) bool {
 	if len(allowed) == 0 {
 		return true
@@ -208,7 +248,6 @@ func portMatches(target string, allowed []int) bool {
 	}
 	return false
 }
-
 func portValue(value string) int {
 	var port int
 	if _, err := fmt.Sscanf(strings.TrimSpace(value), "%d", &port); err != nil {
@@ -216,7 +255,6 @@ func portValue(value string) int {
 	}
 	return port
 }
-
 func deniedCapability(action string) bool {
 	switch strings.ToLower(strings.TrimSpace(action)) {
 	case "credential-collection", "credential-extraction", "persistence", "destructive-write", "log-deletion", "covert-channel", "process-injection", "evasion", "data-exfiltration", "arbitrary-command":

@@ -77,6 +77,7 @@ type Engine struct {
 	execution      execution.Registry
 	evidenceSigner evidence.Signer
 	evidence       map[string]evidence.Bundle
+	observations   map[string]domain.Observation
 	findings       map[string]reporting.Finding
 	reports        map[string]reporting.Report
 	audit          *governance.AuditLog
@@ -113,6 +114,11 @@ func NewEngine() *Engine {
 	if err != nil {
 		panic(err)
 	}
+	if len(persisted.Policy) > 0 {
+		if err := policyEngine.Restore(persisted.Policy); err != nil {
+			panic(err)
+		}
+	}
 	if len(persisted.Jobs) > 0 {
 		if err := jobController.Restore(persisted.Jobs); err != nil {
 			panic(err)
@@ -134,6 +140,7 @@ func NewEngine() *Engine {
 		execution:      execution.NewRegistry(),
 		evidenceSigner: signer,
 		evidence:       make(map[string]evidence.Bundle),
+		observations:   make(map[string]domain.Observation),
 		findings:       make(map[string]reporting.Finding),
 		reports:        make(map[string]reporting.Report),
 		audit:          governance.NewAuditLog(),
@@ -151,6 +158,9 @@ func NewEngine() *Engine {
 	}
 	for _, item := range persisted.Evidence {
 		engine.evidence[item.ID] = item
+	}
+	for _, item := range persisted.Observations {
+		engine.observations[item.ID] = item
 	}
 	for _, item := range persisted.Findings {
 		engine.findings[item.ID] = item
@@ -389,6 +399,7 @@ func (e *Engine) Start(ctx context.Context) error {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+		e.persistState()
 		writeJSON(w, http.StatusCreated, request.Engagement)
 	})
 	mux.HandleFunc("/api/v1/assessment-jobs", func(w http.ResponseWriter, r *http.Request) {
@@ -473,8 +484,10 @@ func (e *Engine) Start(ctx context.Context) error {
 			return
 		}
 		finding := reporting.FromCheck(output.Result, input.Target, bundle.ID)
+		observation := domain.Observation{ID: bundle.ID, JobID: job.ID, CheckID: input.CheckID, Target: input.Target, Status: map[bool]string{true: "PASSED", false: "FAILED"}[output.Result.Passed], Confidence: output.Result.Confidence, Summary: output.Result.Summary, EvidenceID: bundle.ID, CreatedAt: output.CollectedAt}
 		e.mu.Lock()
 		e.evidence[bundle.ID] = bundle
+		e.observations[observation.ID] = observation
 		e.findings[finding.ID] = finding
 		e.mu.Unlock()
 		_ = e.jobController.Transition(job.ID, control.Approved, output.CollectedAt)
@@ -603,6 +616,23 @@ func (e *Engine) Start(ctx context.Context) error {
 		}
 		e.mu.RUnlock()
 		writeJSON(w, http.StatusOK, items)
+	})
+	mux.HandleFunc("/api/v1/observations", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if err := e.auth(r); err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		e.mu.RLock()
+		items := make([]domain.Observation, 0, len(e.observations))
+		for _, item := range e.observations {
+			items = append(items, item)
+		}
+		e.mu.RUnlock()
+		writeJSON(w, http.StatusOK, storage.QueryObservations(items, storage.ObservationQuery{JobID: r.URL.Query().Get("job_id"), CheckID: r.URL.Query().Get("check_id"), Status: r.URL.Query().Get("status"), Page: queryInt(r.URL.Query().Get("page")), PageSize: queryInt(r.URL.Query().Get("page_size"))}))
 	})
 	mux.HandleFunc("/api/v1/remediations", func(w http.ResponseWriter, r *http.Request) {
 		if err := e.auth(r); err != nil {

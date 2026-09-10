@@ -138,6 +138,18 @@ paths:
       responses:
         '200': { description: Evidence manifests }
         '401': { description: Authentication required }
+  /api/v1/observations:
+    get:
+      summary: Query durable execution observations
+      parameters:
+        - { name: job_id, in: query, schema: { type: string } }
+        - { name: check_id, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: page_size, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+      responses:
+        '200': { description: Durable observation page }
+        '401': { description: Authentication required }
   /api/v1/remediations:
     get:
       summary: List remediation plans
@@ -167,7 +179,7 @@ paths:
               type: object
               required: [status]
               properties:
-                status: { type: string, enum: [OPEN, IN_PROGRESS, READY_FOR_RETEST, CLOSED] }
+                status: { type: string, enum: [OPEN, IN_PROGRESS, PARTIALLY_REMEDIATED, READY_FOR_RETEST, RISK_ACCEPTED, CLOSED] }
       responses:
         '200': { description: Remediation updated }
         '409': { description: Invalid transition }
