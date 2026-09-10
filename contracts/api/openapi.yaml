@@ -64,6 +64,51 @@ paths:
         '202': { description: Assessment job accepted }
         '403': { description: Scope, policy, time-window, or budget denied }
         '401': { description: Authentication required }
+  /api/v1/jobs:
+    get:
+      summary: List signed assessment jobs
+      responses:
+        '200': { description: Job list }
+        '401': { description: Authentication required }
+  /api/v1/executions:
+    post:
+      summary: Run one policy-approved safe adapter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecutionRequest'
+      responses:
+        '201': { description: Execution, evidence, and finding created }
+        '403': { description: Adapter or target policy denied }
+        '404': { description: Job not found }
+  /api/v1/findings:
+    get:
+      summary: List generated findings
+      responses:
+        '200': { description: Finding list }
+        '401': { description: Authentication required }
+  /api/v1/reports:
+    get:
+      summary: List integrity-protected reports
+      responses:
+        '200': { description: Report list }
+    post:
+      summary: Generate an integrity-protected report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportRequest'
+      responses:
+        '201': { description: Report generated }
+  /api/v1/audit:
+    get:
+      summary: List hash-chained audit events
+      responses:
+        '200': { description: Audit chain }
   /v1/simulation/tasks:
     post:
       summary: Submit a fixture-backed compatibility simulation task
@@ -135,3 +180,17 @@ components:
             status_code: { type: integer }
             body: { type: string }
             metadata: { type: object, additionalProperties: { type: string } }
+    ExecutionRequest:
+      type: object
+      required: [job_id, target, check_id]
+      properties:
+        job_id: { type: string }
+        target: { type: string }
+        check_id: { type: string }
+        fixture: { type: object, additionalProperties: true }
+    ReportRequest:
+      type: object
+      required: [engagement_id, finding_ids]
+      properties:
+        engagement_id: { type: string }
+        finding_ids: { type: array, items: { type: string } }

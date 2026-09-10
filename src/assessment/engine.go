@@ -20,8 +20,12 @@ import (
 	"ANGEL/src/assessment/checks"
 	"ANGEL/src/assessment/control"
 	"ANGEL/src/assessment/domain"
+	"ANGEL/src/assessment/evidence"
+	"ANGEL/src/assessment/execution"
+	"ANGEL/src/assessment/governance"
 	"ANGEL/src/assessment/plugins"
 	"ANGEL/src/assessment/policy"
+	"ANGEL/src/assessment/reporting"
 )
 
 type Agent struct {
@@ -51,16 +55,22 @@ type Result struct {
 }
 
 type Engine struct {
-	mu            sync.RWMutex
-	agents        map[string]*Agent
-	tasks         map[string]*Task
-	results       map[string]*Result
-	apiKey        string
-	host          string
-	port          int
-	httpSrv       *http.Server
-	policyEngine  *policy.Engine
-	jobController *control.Controller
+	mu             sync.RWMutex
+	agents         map[string]*Agent
+	tasks          map[string]*Task
+	results        map[string]*Result
+	apiKey         string
+	host           string
+	port           int
+	httpSrv        *http.Server
+	policyEngine   *policy.Engine
+	jobController  *control.Controller
+	execution      execution.Registry
+	evidenceSigner evidence.Signer
+	evidence       map[string]evidence.Bundle
+	findings       map[string]reporting.Finding
+	reports        map[string]reporting.Report
+	audit          *governance.AuditLog
 }
 
 func NewEngine() *Engine {
@@ -69,15 +79,25 @@ func NewEngine() *Engine {
 	if err != nil {
 		panic(err)
 	}
+	signer, err := evidence.NewSigner()
+	if err != nil {
+		panic(err)
+	}
 	return &Engine{
-		agents:        make(map[string]*Agent),
-		tasks:         make(map[string]*Task),
-		results:       make(map[string]*Result),
-		apiKey:        os.Getenv("ANGEL_OPERATOR_KEY"),
-		host:          envOr("ANGEL_HOST", "127.0.0.1"),
-		port:          envPort("ANGEL_PORT", 8001),
-		policyEngine:  policyEngine,
-		jobController: jobController,
+		agents:         make(map[string]*Agent),
+		tasks:          make(map[string]*Task),
+		results:        make(map[string]*Result),
+		apiKey:         os.Getenv("ANGEL_OPERATOR_KEY"),
+		host:           envOr("ANGEL_HOST", "127.0.0.1"),
+		port:           envPort("ANGEL_PORT", 8001),
+		policyEngine:   policyEngine,
+		jobController:  jobController,
+		execution:      execution.NewRegistry(),
+		evidenceSigner: signer,
+		evidence:       make(map[string]evidence.Bundle),
+		findings:       make(map[string]reporting.Finding),
+		reports:        make(map[string]reporting.Report),
+		audit:          governance.NewAuditLog(),
 	}
 }
 
@@ -254,6 +274,136 @@ func (e *Engine) Start(ctx context.Context) error {
 			return
 		}
 		writeJSON(w, http.StatusAccepted, job)
+	})
+	mux.HandleFunc("/api/v1/jobs", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if err := e.auth(r); err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		writeJSON(w, http.StatusOK, e.jobController.List())
+	})
+	mux.HandleFunc("/api/v1/executions", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if err := e.auth(r); err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		var input execution.Input
+		if err := decodeJSON(w, r, &input); err != nil || strings.TrimSpace(input.JobID) == "" || strings.TrimSpace(input.CheckID) == "" {
+			http.Error(w, "invalid execution contract", http.StatusBadRequest)
+			return
+		}
+		job, ok := e.jobController.Get(input.JobID)
+		if !ok {
+			http.Error(w, "job not found", http.StatusNotFound)
+			return
+		}
+		if job.Target != input.Target {
+			http.Error(w, "execution target does not match signed job", http.StatusForbidden)
+			return
+		}
+		output, err := e.execution.Run(r.Context(), input)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusForbidden)
+			return
+		}
+		bundle, err := evidence.CreateBundle(job.EngagementID, job.ID, "application/json", output.Evidence, "0", true, output.CollectedAt, e.evidenceSigner)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		finding := reporting.FromCheck(output.Result, input.Target, bundle.ID)
+		e.mu.Lock()
+		e.evidence[bundle.ID] = bundle
+		e.findings[finding.ID] = finding
+		e.mu.Unlock()
+		_ = e.jobController.Transition(job.ID, control.Approved, output.CollectedAt)
+		_ = e.jobController.Transition(job.ID, control.Queued, output.CollectedAt)
+		_ = e.jobController.Transition(job.ID, control.Running, output.CollectedAt)
+		_ = e.jobController.Transition(job.ID, control.Completed, output.CollectedAt)
+		e.audit.Append("operator", "EXECUTION_COMPLETED", "job", job.ID, output.CollectedAt)
+		writeJSON(w, http.StatusCreated, map[string]any{"output": output, "evidence": bundle, "finding": finding})
+	})
+	mux.HandleFunc("/api/v1/findings", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if err := e.auth(r); err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		e.mu.RLock()
+		items := make([]reporting.Finding, 0, len(e.findings))
+		for _, item := range e.findings {
+			items = append(items, item)
+		}
+		e.mu.RUnlock()
+		writeJSON(w, http.StatusOK, items)
+	})
+	mux.HandleFunc("/api/v1/reports", func(w http.ResponseWriter, r *http.Request) {
+		if err := e.auth(r); err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		if r.Method == http.MethodGet {
+			e.mu.RLock()
+			items := make([]reporting.Report, 0, len(e.reports))
+			for _, item := range e.reports {
+				items = append(items, item)
+			}
+			e.mu.RUnlock()
+			writeJSON(w, http.StatusOK, items)
+			return
+		}
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		var request struct {
+			EngagementID string   `json:"engagement_id"`
+			FindingIDs   []string `json:"finding_ids"`
+		}
+		if err := decodeJSON(w, r, &request); err != nil || strings.TrimSpace(request.EngagementID) == "" {
+			http.Error(w, "invalid report contract", http.StatusBadRequest)
+			return
+		}
+		e.mu.RLock()
+		findings := make([]reporting.Finding, 0, len(request.FindingIDs))
+		for _, id := range request.FindingIDs {
+			if item, ok := e.findings[id]; ok {
+				findings = append(findings, item)
+			}
+		}
+		e.mu.RUnlock()
+		report, err := reporting.New(request.EngagementID, findings, time.Now().UTC())
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		e.mu.Lock()
+		e.reports[report.ID] = report
+		e.mu.Unlock()
+		e.audit.Append("operator", "REPORT_GENERATED", "report", report.ID, report.GeneratedAt)
+		writeJSON(w, http.StatusCreated, report)
+	})
+	mux.HandleFunc("/api/v1/audit", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if err := e.auth(r); err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		writeJSON(w, http.StatusOK, e.audit.List())
 	})
 
 	mux.HandleFunc("/api/v1/register", func(w http.ResponseWriter, r *http.Request) {
