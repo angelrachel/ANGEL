@@ -25,6 +25,7 @@ import (
 	"ANGEL/src/assessment/governance"
 	"ANGEL/src/assessment/plugins"
 	"ANGEL/src/assessment/policy"
+	"ANGEL/src/assessment/query"
 	"ANGEL/src/assessment/ratelimit"
 	"ANGEL/src/assessment/reporting"
 	"ANGEL/src/assessment/risk"
@@ -357,7 +358,10 @@ func (e *Engine) Start(ctx context.Context) error {
 			items = append(items, item)
 		}
 		e.mu.RUnlock()
-		writeJSON(w, http.StatusOK, items)
+		page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+		pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
+		minimum, _ := strconv.ParseFloat(r.URL.Query().Get("minimum_confidence"), 64)
+		writeJSON(w, http.StatusOK, query.Findings(items, query.FindingFilter{Severity: r.URL.Query().Get("severity"), Status: r.URL.Query().Get("status"), Target: r.URL.Query().Get("target"), Search: r.URL.Query().Get("search"), Page: page, PageSize: pageSize, MinimumConfidence: minimum}))
 	})
 	mux.HandleFunc("/api/v1/reports", func(w http.ResponseWriter, r *http.Request) {
 		if err := e.auth(r); err != nil {
