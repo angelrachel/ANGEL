@@ -1,6 +1,7 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterOutlet } from '@angular/router';
+import { ApiService } from './api.service';
 
 interface SimulationTask {
   id: string;
@@ -18,6 +19,7 @@ interface SimulationTask {
   styleUrl: './app.scss'
 })
 export class App {
+  private readonly api = inject(ApiService);
   readonly task = signal<SimulationTask>({
     id: 'sim-task-recon-001',
     agentType: 'recon',
@@ -46,6 +48,26 @@ export class App {
       return;
     }
     this.error.set('');
-    this.submitted.set(true);
+    this.api.submitSimulation({
+      id: this.task().id,
+      agent_type: this.task().agentType,
+      target_ref: this.task().targetRef,
+      technique: this.task().technique,
+      mode: this.task().mode,
+      requested_by: this.task().requestedBy
+    }).subscribe({
+      next: (response) => {
+        if (response.authorized === false) {
+          this.error.set(response.message ?? 'Gateway policy approval is required.');
+          this.submitted.set(false);
+          return;
+        }
+        this.submitted.set(true);
+      },
+      error: (response) => {
+        this.error.set(response?.error?.message ?? 'Gateway rejected the task request.');
+        this.submitted.set(false);
+      }
+    });
   }
 }
