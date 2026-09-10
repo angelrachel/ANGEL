@@ -50,11 +50,27 @@ func (r Registry) Resolve(checkID string) (Adapter, error) {
 	return nil, fmt.Errorf("no safe adapter for check %s", checkID)
 }
 func (r Registry) Run(ctx context.Context, input Input) (Output, error) {
-	adapter, err := r.Resolve(input.CheckID)
+	adapter, err := r.ResolveInput(input)
 	if err != nil {
 		return Output{}, err
 	}
 	return adapter.Run(ctx, input)
+}
+
+func (r Registry) ResolveInput(input Input) (Adapter, error) {
+	if _, ok := checks.Find(input.CheckID); !ok {
+		return nil, fmt.Errorf("no safe adapter for check %s", input.CheckID)
+	}
+	target := strings.ToLower(strings.TrimSpace(input.Target))
+	for _, adapter := range r.adapters {
+		if strings.HasPrefix(target, "fixture://") && adapter.Name() == "fixture-replay" {
+			return adapter, nil
+		}
+		if (strings.HasPrefix(target, "http://") || strings.HasPrefix(target, "https://")) && adapter.Name() == "http-metadata" && adapter.Supports(input.CheckID) {
+			return adapter, nil
+		}
+	}
+	return nil, fmt.Errorf("no adapter for target %s and check %s", input.Target, input.CheckID)
 }
 
 type FixtureAdapter struct{}

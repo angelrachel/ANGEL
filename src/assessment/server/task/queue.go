@@ -6,11 +6,15 @@ import (
 )
 
 type Task struct {
-	ID        string
-	AgentID   string
-	Type      string
-	Payload   map[string]interface{}
-	CreatedAt time.Time
+	ID         string
+	AgentID    string
+	Type       string
+	Payload    map[string]interface{}
+	CreatedAt  time.Time
+	Status     string
+	Attempts   int
+	LeaseUntil time.Time
+	LastError  string
 }
 
 type Queue struct {
@@ -40,9 +44,13 @@ func (q *Queue) Add(task *Task) {
 	if task == nil || task.ID == "" {
 		return
 	}
+	copy := cloneTask(task)
+	if copy.Status == "" {
+		copy.Status = TaskQueued
+	}
 	q.mu.Lock()
 	defer q.mu.Unlock()
-	q.tasks[task.ID] = cloneTask(task)
+	q.tasks[task.ID] = copy
 }
 
 func (q *Queue) Get(taskID string) *Task {
