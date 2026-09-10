@@ -12,6 +12,7 @@ import (
 
 	"ANGEL/src/assessment/domain"
 	"ANGEL/src/assessment/evidence"
+	"ANGEL/src/assessment/governance"
 	"ANGEL/src/assessment/policy"
 	"ANGEL/src/assessment/reporting"
 )
@@ -22,6 +23,7 @@ type PersistentState struct {
 	ControllerPrivate string                 `json:"controller_private,omitempty"`
 	ControllerPublic  string                 `json:"controller_public,omitempty"`
 	Policy            []policy.SnapshotEntry `json:"policy,omitempty"`
+	Audit             []governance.Event     `json:"audit,omitempty"`
 	Jobs              []domain.AssessmentJob `json:"jobs"`
 	Observations      []domain.Observation   `json:"observations"`
 	Evidence          []evidence.Bundle      `json:"evidence"`

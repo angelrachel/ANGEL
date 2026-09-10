@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"ANGEL/src/assessment/domain"
+	"ANGEL/src/assessment/governance"
 )
 
 func TestEngineRestoresDurableSignedJobState(t *testing.T) {
@@ -20,10 +21,14 @@ func TestEngineRestoresDurableSignedJobState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	first.audit.Append("operator", "PERSISTENCE_TEST", "engagement", engagement.ID, now)
 	first.persistState()
 	second := NewEngine()
 	restored, ok := second.jobController.Get(job.ID)
 	if !ok || restored.ID != job.ID || !second.jobController.Verify(restored) {
 		t.Fatalf("restored=%#v ok=%v", restored, ok)
+	}
+	if !governance.Verify(second.audit.List()) || len(second.audit.List()) != 1 {
+		t.Fatalf("audit=%#v", second.audit.List())
 	}
 }

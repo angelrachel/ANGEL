@@ -44,6 +44,17 @@ func (l *AuditLog) List() []Event {
 	defer l.mu.RUnlock()
 	return append([]Event(nil), l.events...)
 }
+
+func (l *AuditLog) Restore(events []Event) error {
+	if !Verify(events) {
+		return fmt.Errorf("invalid audit chain")
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.events = append([]Event(nil), events...)
+	return nil
+}
+
 func Verify(events []Event) bool {
 	parent := "0"
 	for _, event := range events {

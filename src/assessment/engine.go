@@ -168,6 +168,11 @@ func NewEngine() *Engine {
 	for _, item := range persisted.Reports {
 		engine.reports[item.ID] = item
 	}
+	if len(persisted.Audit) > 0 {
+		if err := engine.audit.Restore(persisted.Audit); err != nil {
+			panic(err)
+		}
+	}
 	if durableState != nil {
 		engine.persistState()
 	}
@@ -378,6 +383,14 @@ func (e *Engine) Start(ctx context.Context) error {
 		writeJSON(w, http.StatusOK, checks.IDs())
 	})
 	mux.HandleFunc("/api/v1/engagements", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			if err := e.auth(r); err != nil {
+				http.Error(w, err.Error(), http.StatusUnauthorized)
+				return
+			}
+			writeJSON(w, http.StatusOK, e.policyEngine.Snapshot())
+			return
+		}
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -530,7 +543,7 @@ func (e *Engine) Start(ctx context.Context) error {
 				items = append(items, item)
 			}
 			e.mu.RUnlock()
-			writeJSON(w, http.StatusOK, items)
+			writeJSON(w, http.StatusOK, storage.QueryReports(items, storage.ReportQuery{EngagementID: r.URL.Query().Get("engagement_id"), Page: queryInt(r.URL.Query().Get("page")), PageSize: queryInt(r.URL.Query().Get("page_size"))}))
 			return
 		}
 		if r.Method != http.MethodPost {
@@ -610,12 +623,10 @@ func (e *Engine) Start(ctx context.Context) error {
 		e.mu.RLock()
 		items := make([]evidence.Bundle, 0, len(e.evidence))
 		for _, item := range e.evidence {
-			safe := item
-			safe.Payload = nil
-			items = append(items, safe)
+			items = append(items, item)
 		}
 		e.mu.RUnlock()
-		writeJSON(w, http.StatusOK, items)
+		writeJSON(w, http.StatusOK, storage.QueryEvidence(items, storage.EvidenceQuery{EngagementID: r.URL.Query().Get("engagement_id"), JobID: r.URL.Query().Get("job_id"), ContentType: r.URL.Query().Get("content_type"), Page: queryInt(r.URL.Query().Get("page")), PageSize: queryInt(r.URL.Query().Get("page_size"))}))
 	})
 	mux.HandleFunc("/api/v1/observations", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {

@@ -32,6 +32,6 @@ func (e *Engine) persistState() {
 	}
 	e.mu.RUnlock()
 	private, public := e.jobController.KeyMaterial()
-	state := storage.PersistentState{Version: 1, Jobs: e.jobController.List(), Policy: e.policyEngine.Snapshot(), Observations: observations, Evidence: evidence, Findings: findings, Reports: reports, ControllerPrivate: hex.EncodeToString(private), ControllerPublic: hex.EncodeToString(public)}
+	state := storage.PersistentState{Version: 1, Jobs: e.jobController.List(), Policy: e.policyEngine.Snapshot(), Audit: e.audit.List(), Observations: observations, Evidence: evidence, Findings: findings, Reports: reports, ControllerPrivate: hex.EncodeToString(private), ControllerPublic: hex.EncodeToString(public)}
 	_ = e.durableState.Save(state)
 }
