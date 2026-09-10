@@ -1,71 +1,25 @@
 <main class="shell">
   <header class="header">
-    <div>
-      <p class="eyebrow">ANGEL CONTROL PLANE</p>
-      <h1>Simulation workspace</h1>
-      <p class="subtitle">Fixture-backed observe and simulate workflows only.</p>
-    </div>
-    <span class="badge">Policy gate required</span>
+    <div><p class="eyebrow">ANGEL-25 ASSESSMENT PLATFORM</p><h1>Authorized security validation</h1><p class="subtitle">Engagement control, scoped assessment, evidence, and risk operations.</p></div>
+    <div class="status"><span class="dot" [class.online]="connected()"></span>{{ connected() ? 'API connected' : 'API offline' }}</div>
   </header>
-
-  <section class="grid">
-    <form class="card form" (ngSubmit)="submit()">
-      <div class="card-heading">
-        <h2>New simulation task</h2>
-        <span class="mode">{{ task().mode }}</span>
-      </div>
-
-      <label>
-        Task ID
-        <input [ngModel]="task().id" (ngModelChange)="update('id', $event)" name="id" autocomplete="off" />
-      </label>
-      <label>
-        Agent type
-        <input [ngModel]="task().agentType" (ngModelChange)="update('agentType', $event)" name="agentType" autocomplete="off" />
-      </label>
-      <label>
-        Fixture target
-        <input [ngModel]="task().targetRef" (ngModelChange)="update('targetRef', $event)" name="targetRef" autocomplete="off" />
-        <small>Only fixture:// references are accepted.</small>
-      </label>
-      <label>
-        Technique
-        <input [ngModel]="task().technique" (ngModelChange)="update('technique', $event)" name="technique" autocomplete="off" />
-      </label>
-      <label>
-        Mode
-        <select [ngModel]="task().mode" (ngModelChange)="update('mode', $event)" name="mode">
-          <option value="observe">observe</option>
-          <option value="simulate">simulate</option>
-        </select>
-      </label>
-      <label>
-        Requested by
-        <input [ngModel]="task().requestedBy" (ngModelChange)="update('requestedBy', $event)" name="requestedBy" autocomplete="off" />
-      </label>
-
-      @if (error()) {
-        <p class="notice error">{{ error() }}</p>
-      }
-      @if (submitted()) {
-        <p class="notice success">Task validated locally. Go policy approval is still required.</p>
-      }
-      <button type="submit">Validate simulation task</button>
-    </form>
-
-    <aside class="card summary">
-      <h2>Safety boundary</h2>
-      <ul>
-        <li>Target references are limited to fixture://.</li>
-        <li>Modes are observe and simulate only.</li>
-        <li>No command execution is exposed here.</li>
-        <li>Authorization remains false until the Go policy gate.</li>
-      </ul>
-      <div class="status-row">
-        <span>Local validation</span>
-        <strong [class.ready]="valid()">{{ valid() ? 'ready' : 'needs input' }}</strong>
-      </div>
+  <section class="metrics"><article class="metric"><span>Modules</span><strong>{{ modules().length || '—' }}</strong><small>registered capabilities</small></article><article class="metric"><span>Layers</span><strong>25</strong><small>policy domains</small></article><article class="metric"><span>Mode</span><strong>Scoped</strong><small>fail-closed execution</small></article><article class="metric"><span>Readiness</span><strong [class.good]="readiness()">{{ readiness() ? 'READY' : 'CHECK' }}</strong><small>control-plane status</small></article></section>
+  @if (error()) { <p class="notice error">{{ error() }}</p> }
+  @if (notice()) { <p class="notice success">{{ notice() }}</p> }
+  <section class="layout">
+    <div class="stack">
+      <form class="card form" (ngSubmit)="register()"><div class="card-heading"><div><span class="eyebrow">LAYER 1–3</span><h2>Engagement and scope</h2></div><span class="pill">{{ engagement().id }}</span></div>
+        <label>Engagement name<input [ngModel]="engagement().name" (ngModelChange)="updateEngagement('name', $event)" name="name" /></label>
+        <div class="row"><label>Scope kind<select [ngModel]="scope().kind" (ngModelChange)="updateScope('kind', $event)" name="kind"><option value="fixture">fixture</option><option value="hostname">hostname</option><option value="url">url</option><option value="cidr">cidr</option></select></label><label>Target value<input [ngModel]="scope().value" (ngModelChange)="updateScope('value', $event)" name="value" /></label></div>
+        <small>Every assessment job must match this target and one of the declared actions.</small><button type="submit">Register authorized engagement</button>
+      </form>
+      <form class="card form" (ngSubmit)="createJob()"><div class="card-heading"><div><span class="eyebrow">LAYER 4</span><h2>Create assessment job</h2></div><span class="pill">signed job</span></div>
+        <label>Assessment type<select [ngModel]="job().task_type" (ngModelChange)="updateJob('task_type', $event)" name="task_type"><option value="surface-map">surface-map</option><option value="tls-assessment">tls-assessment</option><option value="api-contract">api-contract</option><option value="authorization-matrix">authorization-matrix</option><option value="evidence-collection">evidence-collection</option></select></label>
+        <label>Target<input [ngModel]="job().target" (ngModelChange)="updateJob('target', $event)" name="target" /></label><label>Policy action<input [ngModel]="job().action" (ngModelChange)="updateJob('action', $event)" name="action" /></label><button type="submit">Queue assessment</button>
+      </form>
+    </div>
+    <aside class="stack"><section class="card"><div class="card-heading"><div><span class="eyebrow">CATALOG</span><h2>Registered modules</h2></div><span class="pill">650</span></div><div class="module-list">@for (module of modules().slice(0, 12); track module.id) { <div class="module"><span>{{ module.id }}</span><strong>{{ module.name }}</strong><small>L{{ module.layer }} · {{ module.capability }}</small></div> }</div></section>
+      <section class="card"><div class="card-heading"><div><span class="eyebrow">QUEUE</span><h2>Recent jobs</h2></div></div>@if (jobs().length === 0) { <p class="muted">No jobs submitted in this session.</p> } @for (item of jobs(); track item.id) { <div class="job"><strong>{{ item.task_type }}</strong><span>{{ item.status }}</span><small>{{ item.target }}</small></div> }</section>
     </aside>
-  </section>
-  <router-outlet />
+  </section><router-outlet />
 </main>

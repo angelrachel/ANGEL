@@ -1,32 +1,18 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
-export interface SimulationTaskRequest {
-  id: string;
-  agent_type: string;
-  target_ref: string;
-  technique: string;
-  mode: 'observe' | 'simulate';
-  requested_by: string;
-}
-
-export interface SimulationTaskResponse {
-  status: string;
-  simulation: boolean;
-  authorized: boolean;
-  message?: string;
-}
+export interface ModuleEntry { id: string; layer: number; name: string; capability: string; safe: boolean; }
+export interface Engagement { id: string; name: string; organization_id: string; authorized: boolean; starts_at: string; ends_at: string; policy_hash: string; stopped: boolean; }
+export interface ScopeEntry { id: string; engagement_id: string; kind: string; value: string; ports: number[]; actions: string[]; excluded: boolean; }
+export interface AssessmentJob { id: string; engagement_id: string; task_type: string; target: string; policy_hash: string; status: string; created_at: string; signature: string; }
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private readonly http = inject(HttpClient);
-
-  health(): Observable<{ status: string }> {
-    return this.http.get<{ status: string }>('/healthz');
-  }
-
-  submitSimulation(task: SimulationTaskRequest): Observable<SimulationTaskResponse> {
-    return this.http.post<SimulationTaskResponse>('/v1/simulation/tasks', task);
-  }
+  private readonly headers = new HttpHeaders({ Authorization: 'Bearer local-development-operator' });
+  health(): Observable<{ status: string }> { return this.http.get<{ status: string }>('/healthz'); }
+  modules(): Observable<ModuleEntry[]> { return this.http.get<ModuleEntry[]>('/api/v1/modules', { headers: this.headers }); }
+  createEngagement(payload: { engagement: Engagement; scope: ScopeEntry[]; budget: number }): Observable<Engagement> { return this.http.post<Engagement>('/api/v1/engagements', payload, { headers: this.headers }); }
+  createJob(payload: { engagement_id: string; task_type: string; target: string; action: string }): Observable<AssessmentJob> { return this.http.post<AssessmentJob>('/api/v1/assessment-jobs', payload, { headers: this.headers }); }
 }
