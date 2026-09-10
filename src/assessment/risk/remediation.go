@@ -30,6 +30,15 @@ type Tracker struct {
 	retests     map[string]Retest
 }
 
+const (
+	StatusOpen                = "OPEN"
+	StatusInProgress          = "IN_PROGRESS"
+	StatusPartiallyRemediated = "PARTIALLY_REMEDIATED"
+	StatusReadyForRetest      = "READY_FOR_RETEST"
+	StatusRiskAccepted        = "RISK_ACCEPTED"
+	StatusClosed              = "CLOSED"
+)
+
 func NewTracker() *Tracker {
 	return &Tracker{remediation: map[string]Remediation{}, retests: map[string]Retest{}}
 }
@@ -47,7 +56,7 @@ func (t *Tracker) Create(findingID, owner, plan string, due time.Time) (Remediat
 	return r, nil
 }
 func (t *Tracker) Update(id, status string, at time.Time) error {
-	if status != "OPEN" && status != "IN_PROGRESS" && status != "READY_FOR_RETEST" && status != "CLOSED" {
+	if status != StatusOpen && status != StatusInProgress && status != StatusPartiallyRemediated && status != StatusReadyForRetest && status != StatusRiskAccepted && status != StatusClosed {
 		return fmt.Errorf("invalid remediation status")
 	}
 	t.mu.Lock()
@@ -56,7 +65,7 @@ func (t *Tracker) Update(id, status string, at time.Time) error {
 	if !ok {
 		return fmt.Errorf("remediation not found")
 	}
-	if r.Status == "CLOSED" {
+	if r.Status == StatusClosed || r.Status == StatusRiskAccepted {
 		return fmt.Errorf("closed remediation cannot be changed")
 	}
 	if !legalTransition(r.Status, status) {
@@ -69,12 +78,14 @@ func (t *Tracker) Update(id, status string, at time.Time) error {
 }
 func legalTransition(from, to string) bool {
 	switch from {
-	case "OPEN":
-		return to == "IN_PROGRESS" || to == "CLOSED"
-	case "IN_PROGRESS":
-		return to == "READY_FOR_RETEST" || to == "OPEN"
-	case "READY_FOR_RETEST":
-		return to == "IN_PROGRESS" || to == "CLOSED"
+	case StatusOpen:
+		return to == StatusInProgress || to == StatusRiskAccepted || to == StatusClosed
+	case StatusInProgress:
+		return to == StatusPartiallyRemediated || to == StatusReadyForRetest || to == StatusRiskAccepted || to == StatusOpen
+	case StatusPartiallyRemediated:
+		return to == StatusInProgress || to == StatusReadyForRetest || to == StatusRiskAccepted
+	case StatusReadyForRetest:
+		return to == StatusInProgress || to == StatusClosed
 	default:
 		return false
 	}
