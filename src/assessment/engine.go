@@ -16,6 +16,11 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"ANGEL/src/assessment/control"
+	"ANGEL/src/assessment/domain"
+	"ANGEL/src/assessment/plugins"
+	"ANGEL/src/assessment/policy"
 )
 
 type Agent struct {
@@ -45,24 +50,33 @@ type Result struct {
 }
 
 type Engine struct {
-	mu      sync.RWMutex
-	agents  map[string]*Agent
-	tasks   map[string]*Task
-	results map[string]*Result
-	apiKey  string
-	host    string
-	port    int
-	httpSrv *http.Server
+	mu            sync.RWMutex
+	agents        map[string]*Agent
+	tasks         map[string]*Task
+	results       map[string]*Result
+	apiKey        string
+	host          string
+	port          int
+	httpSrv       *http.Server
+	policyEngine  *policy.Engine
+	jobController *control.Controller
 }
 
 func NewEngine() *Engine {
+	policyEngine := policy.NewEngine()
+	jobController, err := control.NewController(policyEngine)
+	if err != nil {
+		panic(err)
+	}
 	return &Engine{
-		agents:  make(map[string]*Agent),
-		tasks:   make(map[string]*Task),
-		results: make(map[string]*Result),
-		apiKey:  os.Getenv("ANGEL_OPERATOR_KEY"),
-		host:    envOr("ANGEL_HOST", "127.0.0.1"),
-		port:    envPort("ANGEL_PORT", 8001),
+		agents:        make(map[string]*Agent),
+		tasks:         make(map[string]*Task),
+		results:       make(map[string]*Result),
+		apiKey:        os.Getenv("ANGEL_OPERATOR_KEY"),
+		host:          envOr("ANGEL_HOST", "127.0.0.1"),
+		port:          envPort("ANGEL_PORT", 8001),
+		policyEngine:  policyEngine,
+		jobController: jobController,
 	}
 }
 
@@ -146,6 +160,67 @@ func (e *Engine) Start(ctx context.Context) error {
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	})
+	mux.HandleFunc("/api/v1/modules", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if err := e.auth(r); err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		writeJSON(w, http.StatusOK, plugins.Catalog())
+	})
+	mux.HandleFunc("/api/v1/engagements", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if err := e.auth(r); err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		var request struct {
+			Engagement domain.Engagement   `json:"engagement"`
+			Scope      []domain.ScopeEntry `json:"scope"`
+			Budget     int                 `json:"budget"`
+		}
+		if err := decodeJSON(w, r, &request); err != nil {
+			http.Error(w, "invalid engagement contract", http.StatusBadRequest)
+			return
+		}
+		if err := e.policyEngine.RegisterEngagement(request.Engagement, request.Scope, request.Budget); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		writeJSON(w, http.StatusCreated, request.Engagement)
+	})
+	mux.HandleFunc("/api/v1/assessment-jobs", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if err := e.auth(r); err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		var request struct {
+			EngagementID string `json:"engagement_id"`
+			TaskType     string `json:"task_type"`
+			Target       string `json:"target"`
+			Action       string `json:"action"`
+		}
+		if err := decodeJSON(w, r, &request); err != nil {
+			http.Error(w, "invalid assessment job contract", http.StatusBadRequest)
+			return
+		}
+		job, err := e.jobController.Create(request.EngagementID, request.TaskType, request.Target, request.Action, time.Now().UTC())
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusForbidden)
+			return
+		}
+		writeJSON(w, http.StatusAccepted, job)
 	})
 
 	mux.HandleFunc("/api/v1/register", func(w http.ResponseWriter, r *http.Request) {
