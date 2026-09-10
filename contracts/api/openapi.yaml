@@ -140,6 +140,12 @@ paths:
       summary: List hash-chained audit events
       responses:
         '200': { description: Audit chain }
+  /api/v1/snapshot:
+    get:
+      summary: Export a signed redacted operational snapshot
+      responses:
+        '200': { description: Snapshot and verification public key }
+        '401': { description: Authentication required }
   /v1/simulation/tasks:
     post:
       summary: Submit a fixture-backed compatibility simulation task

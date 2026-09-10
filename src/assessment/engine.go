@@ -23,6 +23,7 @@ import (
 	"ANGEL/src/assessment/evidence"
 	"ANGEL/src/assessment/execution"
 	"ANGEL/src/assessment/governance"
+	"ANGEL/src/assessment/persistence"
 	"ANGEL/src/assessment/plugins"
 	"ANGEL/src/assessment/policy"
 	"ANGEL/src/assessment/query"
@@ -76,6 +77,7 @@ type Engine struct {
 	audit          *governance.AuditLog
 	remediation    *risk.Tracker
 	limiter        *ratelimit.Limiter
+	snapshotSigner persistence.Signer
 }
 
 func NewEngine() *Engine {
@@ -105,6 +107,13 @@ func NewEngine() *Engine {
 		audit:          governance.NewAuditLog(),
 		remediation:    risk.NewTracker(),
 		limiter:        ratelimit.New(20, 40),
+		snapshotSigner: func() persistence.Signer {
+			signer, err := persistence.NewSigner()
+			if err != nil {
+				panic(err)
+			}
+			return signer
+		}(),
 	}
 }
 
@@ -458,6 +467,34 @@ func (e *Engine) Start(ctx context.Context) error {
 			return
 		}
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	})
+	mux.HandleFunc("/api/v1/snapshot", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if err := e.auth(r); err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		e.mu.RLock()
+		findings := make([]reporting.Finding, 0, len(e.findings))
+		for _, item := range e.findings {
+			findings = append(findings, item)
+		}
+		bundles := make([]evidence.Bundle, 0, len(e.evidence))
+		for _, item := range e.evidence {
+			safe := item
+			safe.Payload = nil
+			bundles = append(bundles, safe)
+		}
+		e.mu.RUnlock()
+		snapshot, err := persistence.Create(persistence.Snapshot{Version: 1, ExportedAt: time.Now().UTC(), Jobs: e.jobController.List(), Findings: findings, Evidence: bundles, Audit: e.audit.List()}, e.snapshotSigner)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"snapshot": snapshot, "public_key": fmt.Sprintf("%x", e.snapshotSigner.Public)})
 	})
 	mux.HandleFunc("/api/v1/audit", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
