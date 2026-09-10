@@ -20,5 +20,19 @@ services:
     read_only: true
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=16m
+  fixture-http:
+    build:
+      context: ./lab/services/fixture-http
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      FIXTURE_HTTP_ADDR: :8080
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=8m
 volumes:
   angel-data:

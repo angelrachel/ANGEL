@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TaskLifecycle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["task_id", "state", "version", "updated_at"],
+  "properties": {
+    "task_id": { "type": "string", "minLength": 1 },
+    "state": {
+      "type": "string",
+      "enum": ["created", "approved", "queued", "running", "completed", "failed", "rejected", "cancelled", "expired", "compensated"]
+    },
+    "version": { "type": "integer", "minimum": 1 },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "reason": { "type": "string" }
+  }
+}

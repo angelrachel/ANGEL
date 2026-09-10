@@ -1,18 +1,18 @@
 # Architecture Scaffold Guide
 
-The repository now contains a contract-first scaffold matching the blueprint boundaries without claiming that absent runtimes are installed or operational.
+The repository now follows the executable P0/P1 blueprint in `docs/IMPLEMENTATION_BLUEPRINT.md`. The lab remains restricted to registered assets and typed assessment operations.
 
 | Boundary | Location | Current state | Next coding task |
 |---|---|---|---|
-| API and schemas | `contracts/` | JSON/OpenAPI contracts | Add schema validation tests and versioning |
-| Go control-plane | `src/c2/` | Existing tested foundation | Map Go structs to contracts |
-| Angular UI | `apps/frontend-angular/` | README boundary only | Install/pin Angular CLI and generate app |
-| .NET gateway | `apps/gateway-dotnet/` | README boundary only | Install/pin .NET 10 SDK and generate project |
-| LangGraph/MCP | `apps/orchestrator-langgraph/` | Advisory boundary only | Add planner project and contract tests |
-| Simulation | `simulation/` | Fixtures and reserved adapters | Add replay runner using fixture refs |
+| API and schemas | `contracts/` | Versioned task, result, lifecycle, and OpenAPI contracts | Add persistent API integration and compatibility tests |
+| Go control-plane | `src/c2/` | Tested foundation with P0 lifecycle state machine | Connect lifecycle to durable task persistence and evidence |
+| Angular UI | `apps/frontend-angular/` | Simulation workspace and typed boundary scaffold | Connect operator views to gateway APIs |
+| .NET gateway | `apps/gateway-dotnet/` | Fail-closed task validation boundary and tests | Add persistent gateway-to-control-plane integration |
+| LangGraph/MCP | `apps/orchestrator-langgraph/` | Fixture-only planner with tests | Add bounded multi-step lab workflow nodes |
+| Replay and contracts | `simulation/`, `contracts/` | Strict fixture replay and contract validation | Add P0 acceptance fixtures and service checks |
 | Agent metadata | `agents/` | Registry fixture | Add metadata validation and versioning |
-| Lab fixtures | `lab/` | Reserved directories | Add synthetic mock services only |
-| Infrastructure | `deploy/` | Terraform/Ansible baseline | Run static validation; apply only in isolated lab |
+| Lab services | `lab/services/fixture-http/` | Runnable owned-lab HTTP service with container build and tests | Add database, identity, telemetry, and recovery services |
+| Infrastructure | `deploy/`, `docker-compose.yml` | Guarded deployment baseline plus fixture service composition | Run static validation and isolated lab deployment |
 
 ## Local commands
 

@@ -66,5 +66,5 @@ Generated from source/test evidence; a filename does not prove operational capab
 | `src/c2/server/database` | 2 | 1 | foundation-tested |
 | `src/c2/server/gateway` | 2 | 1 | foundation-tested |
 | `src/c2/server/listener` | 3 | 1 | foundation-tested |
-| `src/c2/server/task` | 3 | 1 | foundation-tested |
+| `src/c2/server/task` | 5 | 2 | foundation-tested |
 | `src/c2/simulation/replay` | 3 | 2 | foundation-tested |

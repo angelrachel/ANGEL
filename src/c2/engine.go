@@ -27,10 +27,14 @@ type Agent struct {
 }
 
 type Task struct {
-	ID      string                 `json:"id"`
-	AgentID string                 `json:"agent_id"`
-	Type    string                 `json:"type"`
-	Payload map[string]interface{} `json:"payload"`
+	ID          string                 `json:"id"`
+	AgentID     string                 `json:"agent_id"`
+	Type        string                 `json:"type"`
+	TargetRef   string                 `json:"target_ref"`
+	Mode        string                 `json:"mode"`
+	RequestedBy string                 `json:"requested_by"`
+	Status      string                 `json:"status"`
+	Payload     map[string]interface{} `json:"payload"`
 }
 
 type Result struct {
@@ -167,7 +171,7 @@ func (e *Engine) Start(ctx context.Context) error {
 	})
 
 	mux.HandleFunc("/api/v1/tasks", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
+		if r.Method != http.MethodGet && r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
@@ -175,6 +179,42 @@ func (e *Engine) Start(ctx context.Context) error {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
+		if r.Method == http.MethodPost {
+			var task Task
+			if err := decodeJSON(w, r, &task); err != nil {
+				http.Error(w, "invalid task contract", http.StatusBadRequest)
+				return
+			}
+			if strings.TrimSpace(task.ID) == "" || strings.TrimSpace(task.AgentID) == "" || strings.TrimSpace(task.Type) == "" || strings.TrimSpace(task.RequestedBy) == "" {
+				http.Error(w, "task identity fields are required", http.StatusBadRequest)
+				return
+			}
+			if !strings.HasPrefix(strings.TrimSpace(task.TargetRef), "fixture://") || len(strings.TrimSpace(task.TargetRef)) <= len("fixture://") {
+				http.Error(w, "target_ref must use a fixture reference", http.StatusForbidden)
+				return
+			}
+			if task.Mode != "observe" && task.Mode != "simulate" {
+				http.Error(w, "mode must be observe or simulate", http.StatusBadRequest)
+				return
+			}
+			e.mu.Lock()
+			if _, exists := e.agents[task.AgentID]; !exists {
+				e.mu.Unlock()
+				http.Error(w, "agent is not registered", http.StatusForbidden)
+				return
+			}
+			if _, exists := e.tasks[task.ID]; exists {
+				e.mu.Unlock()
+				writeJSON(w, http.StatusOK, map[string]string{"status": "exists"})
+				return
+			}
+			task.Status = "queued"
+			e.tasks[task.ID] = &task
+			e.mu.Unlock()
+			writeJSON(w, http.StatusAccepted, task)
+			return
+		}
+
 		agentID := strings.TrimSpace(r.URL.Query().Get("agent_id"))
 		if agentID == "" {
 			http.Error(w, "agent_id is required", http.StatusBadRequest)

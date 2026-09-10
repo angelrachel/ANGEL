@@ -1,4 +1,4 @@
-.PHONY: fmt test vet build check inventory static-check safe-contracts frontend-build gateway-test planner-test app-check validate
+.PHONY: fmt test vet build check inventory static-check safe-contracts frontend-build gateway-test planner-test lab-check app-check validate
 
 fmt:
 	files="$$(gofmt -l .)"; test -z "$$files" || gofmt -w $$files
@@ -30,7 +30,10 @@ gateway-test:
 planner-test:
 	.venv-langgraph/bin/python -m unittest discover -s apps/orchestrator-langgraph -p 'test_*.py'
 
-app-check: frontend-build gateway-test planner-test
+lab-check:
+	cd lab/services/fixture-http && go test ./...
+
+app-check: frontend-build gateway-test planner-test lab-check
 
 validate: check inventory static-check safe-contracts
 	bash -n deploy/scripts/deploy.sh deploy/scripts/destroy.sh deploy/scripts/validate.sh

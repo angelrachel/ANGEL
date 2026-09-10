@@ -6,7 +6,7 @@ ANGEL adalah platform modular untuk **authorized red-team operations** dan secur
 
 ## Project identity
 
-ANGEL dirancang sebagai ekosistem multi-layer yang menggabungkan C2 framework, attack modules, orchestrator, infrastructure, evidence, reporting, dan cleanup lifecycle. Blueprint utama project ini adalah `struktursealangel_ANGEL(3).pdf`.
+ANGEL dirancang sebagai ekosistem multi-layer yang menggabungkan control plane, authenticated assessment workers, orchestrator, private lab infrastructure, evidence, reporting, and recovery. Blueprint implementasi aktif project ini adalah `docs/IMPLEMENTATION_BLUEPRINT.md`; PDF lama dipertahankan sebagai referensi melalui `docs/LEGACY_PDF_MAPPING_AND_BACKLOG.md`.
 
 Repository ini masih dalam tahap pengembangan. Nama file atau folder tidak otomatis berarti seluruh capability telah selesai. Setiap domain harus dinilai berdasarkan status aktualnya: **implemented**, **partial**, **skeleton**, atau **planned**.
 
@@ -68,7 +68,7 @@ ANGEL/
 
 ## Development status
 
-The repository contains a mixture of working foundation code, partial modules, and placeholders. Before treating a domain as operational, verify its source implementation, tests, platform assumptions, error handling, authorization boundary, and deployment path.
+The repository contains a tested control-plane foundation, a fail-closed gateway boundary, an Angular operator boundary, a LangGraph planner boundary, a P0 task lifecycle state machine, and a runnable owned-lab HTTP service. Before treating a domain as released, verify its source implementation, tests, platform assumptions, error handling, authorization boundary, lab execution, recovery, and deployment path.
 
 The following items remain important engineering work:
 
@@ -79,6 +79,11 @@ The following items remain important engineering work:
 5. Remove generated binaries, local databases, debug artifacts, and other build output from source control unless there is a documented release reason.
 6. Verify Terraform, Ansible, Nginx, container, certificate, and network-separation configuration in an isolated lab.
 7. Keep evidence, authorization records, target inventory, and engagement data outside the public source tree.
+
+Active implementation references:
+
+- [`docs/IMPLEMENTATION_BLUEPRINT.md`](docs/IMPLEMENTATION_BLUEPRINT.md) — complete P0/P1 implementation specification.
+- [`docs/LEGACY_PDF_MAPPING_AND_BACKLOG.md`](docs/LEGACY_PDF_MAPPING_AND_BACKLOG.md) — legacy-domain mapping and migration status.
 
 Generated status references:
 
