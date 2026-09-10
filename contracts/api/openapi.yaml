@@ -1,17 +1,59 @@
 openapi: 3.0.3
 info:
-  title: ANGEL Simulation Control Plane
-  version: 0.1.0
-  description: Contract boundary for observe/simulate workflows; no live execution endpoints.
+  title: ANGEL-25 Authorized Security Validation API
+  version: 1.0.0
+  description: Typed control-plane API for authorized, scoped, non-destructive security validation.
+servers:
+  - url: /
+security:
+  - bearerAuth: []
 paths:
   /healthz:
     get:
+      security: []
       responses:
-        '200':
-          description: Service health
+        '200': { description: Service health }
+  /api/v1/modules:
+    get:
+      summary: List registered ANGEL-25 modules
+      responses:
+        '200': { description: Module catalog }
+        '401': { description: Authentication required }
+  /api/v1/checks:
+    get:
+      summary: List executable assessment checks
+      responses:
+        '200': { description: Check registry }
+        '401': { description: Authentication required }
+  /api/v1/engagements:
+    post:
+      summary: Register an authorized engagement and scope
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EngagementRegistration'
+      responses:
+        '201': { description: Engagement registered }
+        '400': { description: Invalid authorization or scope }
+        '401': { description: Authentication required }
+  /api/v1/assessment-jobs:
+    post:
+      summary: Create a signed, policy-gated assessment job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssessmentJobRequest'
+      responses:
+        '202': { description: Assessment job accepted }
+        '403': { description: Scope, policy, time-window, or budget denied }
+        '401': { description: Authentication required }
   /v1/simulation/tasks:
     post:
-      summary: Submit a fixture-backed simulation task
+      summary: Submit a fixture-backed compatibility simulation task
       requestBody:
         required: true
         content:
@@ -19,9 +61,49 @@ paths:
             schema:
               $ref: '../task/task.schema.json'
       responses:
-        '202':
-          description: Simulation accepted
-        '400':
-          description: Invalid contract
-        '403':
-          description: Scope or approval denied
+        '202': { description: Simulation accepted }
+        '400': { description: Invalid contract }
+        '403': { description: Scope or approval denied }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    Engagement:
+      type: object
+      required: [id, name, organization_id, authorized, starts_at, ends_at]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        organization_id: { type: string }
+        authorized: { type: boolean }
+        starts_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time }
+        policy_hash: { type: string }
+        stopped: { type: boolean }
+    ScopeEntry:
+      type: object
+      required: [id, engagement_id, kind, value, actions]
+      properties:
+        id: { type: string }
+        engagement_id: { type: string }
+        kind: { type: string, enum: [fixture, hostname, url, cidr] }
+        value: { type: string }
+        actions: { type: array, items: { type: string } }
+        excluded: { type: boolean }
+    EngagementRegistration:
+      type: object
+      required: [engagement, scope, budget]
+      properties:
+        engagement: { $ref: '#/components/schemas/Engagement' }
+        scope: { type: array, items: { $ref: '#/components/schemas/ScopeEntry' } }
+        budget: { type: integer, minimum: 1 }
+    AssessmentJobRequest:
+      type: object
+      required: [engagement_id, task_type, target, action]
+      properties:
+        engagement_id: { type: string }
+        task_type: { type: string }
+        target: { type: string }
+        action: { type: string }
