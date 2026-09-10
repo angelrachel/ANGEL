@@ -31,9 +31,27 @@ func TestControlPlaneHTTPIntegration(t *testing.T) {
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
+	response, err := client.Get(base + "/readyz")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.StatusCode != http.StatusOK {
+		response.Body.Close()
+		t.Fatalf("ready status=%d", response.StatusCode)
+	}
+	response.Body.Close()
+	response, err = client.Get(base + "/metrics")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.StatusCode != http.StatusOK {
+		response.Body.Close()
+		t.Fatalf("metrics status=%d", response.StatusCode)
+	}
+	response.Body.Close()
 	request, _ := http.NewRequest(http.MethodGet, base+"/api/v1/checks", nil)
 	request.Header.Set("Authorization", "Bearer integration-secret")
-	response, err := client.Do(request)
+	response, err = client.Do(request)
 	if err != nil {
 		t.Fatal(err)
 	}

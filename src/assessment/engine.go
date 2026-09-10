@@ -24,6 +24,7 @@ import (
 	"ANGEL/src/assessment/evidence"
 	"ANGEL/src/assessment/execution"
 	"ANGEL/src/assessment/governance"
+	"ANGEL/src/assessment/metrics"
 	"ANGEL/src/assessment/persistence"
 	"ANGEL/src/assessment/plugins"
 	"ANGEL/src/assessment/policy"
@@ -79,6 +80,7 @@ type Engine struct {
 	remediation    *risk.Tracker
 	limiter        *ratelimit.Limiter
 	snapshotSigner persistence.Signer
+	metrics        *metrics.Collector
 }
 
 func NewEngine() *Engine {
@@ -115,6 +117,7 @@ func NewEngine() *Engine {
 			}
 			return signer
 		}(),
+		metrics: metrics.New(),
 	}
 }
 
@@ -187,12 +190,40 @@ func writeJSON(w http.ResponseWriter, status int, value interface{}) {
 	_ = json.NewEncoder(w).Encode(value)
 }
 
+func writeError(w http.ResponseWriter, status int, code, message string) {
+	writeJSON(w, status, map[string]string{"error": code, "message": message})
+}
+
 func (e *Engine) withHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		started := time.Now()
+		if e.metrics != nil {
+			e.metrics.Start()
+		}
+		writer := &statusWriter{ResponseWriter: w, status: http.StatusOK}
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Cache-Control", "no-store")
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(writer, r)
+		if e.metrics != nil {
+			e.metrics.Finish(writer.status, started)
+		}
 	})
+}
+
+type statusWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (w *statusWriter) WriteHeader(status int) {
+	w.status = status
+	w.ResponseWriter.WriteHeader(status)
+}
+func (w *statusWriter) Write(body []byte) (int, error) {
+	if w.status == http.StatusOK {
+		w.status = http.StatusOK
+	}
+	return w.ResponseWriter.Write(body)
 }
 
 func (e *Engine) Start(ctx context.Context) error {
@@ -203,6 +234,28 @@ func (e *Engine) Start(ctx context.Context) error {
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	})
+	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if e.jobController == nil || e.policyEngine == nil {
+			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "not_ready"})
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})
+	})
+	mux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if e.metrics == nil {
+			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "unavailable"})
+			return
+		}
+		writeJSON(w, http.StatusOK, e.metrics.Snapshot())
 	})
 	mux.HandleFunc("/api/v1/modules", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -737,6 +790,7 @@ func (e *Engine) Start(ctx context.Context) error {
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      15 * time.Second,
 		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    1 << 20,
 	}
 	go func() {
 		<-ctx.Done()
