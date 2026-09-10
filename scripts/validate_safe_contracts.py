@@ -44,6 +44,17 @@ def validate_lifecycle_schema(schema: dict) -> None:
     ], "lifecycle state set is incorrect")
 
 
+def validate_capability_policy(policy: dict, schema: dict) -> None:
+    required = {"allowed", "denied", "default_decision"}
+    require(required <= policy.keys(), "capability policy is incomplete")
+    require(policy["default_decision"] == "deny", "capability policy must deny by default")
+    require(set(policy["allowed"]).isdisjoint(policy["denied"]), "capability appears in both allow and deny lists")
+    schema_properties = schema.get("properties", {})
+    require(schema_properties.get("default_decision", {}).get("enum") == ["deny"], "capability schema must enforce deny by default")
+    require("arbitrary-command" in policy["denied"], "arbitrary command must remain denied")
+    require("data-exfiltration" in policy["denied"], "data exfiltration must remain denied")
+
+
 def main() -> int:
     openapi = (ROOT / "contracts/api/openapi.yaml").read_text(encoding="utf-8")
     require("/healthz:" in openapi, "OpenAPI health path is missing")
@@ -51,9 +62,12 @@ def main() -> int:
     task = load_json(ROOT / "simulation/fixtures/tasks/recon-http.json")
     result = load_json(ROOT / "simulation/fixtures/reports/recon-http-result.json")
     lifecycle = load_json(ROOT / "contracts/task/lifecycle.schema.json")
+    capability_policy = load_json(ROOT / "contracts/authorization/capabilities.json")
+    capability_schema = load_json(ROOT / "contracts/authorization/capabilities.schema.json")
     validate_task(task)
     validate_result(task, result)
     validate_lifecycle_schema(lifecycle)
+    validate_capability_policy(capability_policy, capability_schema)
     print("safe contracts validated")
     return 0
 

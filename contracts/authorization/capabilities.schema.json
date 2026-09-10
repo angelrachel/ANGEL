@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://angel.local/contracts/authorization/capabilities.schema.json",
+  "title": "ANGEL capability policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["allowed", "denied", "default_decision"],
+  "properties": {
+    "allowed": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "denied": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "default_decision": {
+      "type": "string",
+      "enum": ["deny"]
+    }
+  }
+}

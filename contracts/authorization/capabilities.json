@@ -1,0 +1,26 @@
+{
+  "allowed": [
+    "surface-map",
+    "tls-assessment",
+    "api-contract",
+    "authorization-matrix",
+    "evidence-collection",
+    "dependency-inventory",
+    "detection-validation",
+    "synthetic-canary",
+    "lab-proof"
+  ],
+  "denied": [
+    "credential-collection",
+    "credential-extraction",
+    "persistence",
+    "destructive-write",
+    "log-deletion",
+    "covert-channel",
+    "process-injection",
+    "evasion",
+    "data-exfiltration",
+    "arbitrary-command"
+  ],
+  "default_decision": "deny"
+}

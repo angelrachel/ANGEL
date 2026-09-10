@@ -1,6 +1,6 @@
 <main class="shell">
   <header class="header">
-    <div><p class="eyebrow">ANGEL-25 ASSESSMENT PLATFORM</p><h1>Authorized security validation</h1><p class="subtitle">Engagement control, scoped assessment, evidence, and risk operations.</p></div>
+    <div><p class="eyebrow">ANGEL ASSESSMENT PLATFORM</p><h1>Authorized security validation</h1><p class="subtitle">Engagement control, scoped assessment, evidence, and risk operations.</p></div>
     <div class="status"><span class="dot" [class.online]="connected()"></span>{{ connected() ? 'API connected' : 'API offline' }}</div>
   </header>
   <section class="metrics"><article class="metric"><span>Modules</span><strong>{{ modules().length || '—' }}</strong><small>registered capabilities</small></article><article class="metric"><span>Layers</span><strong>25</strong><small>policy domains</small></article><article class="metric"><span>Mode</span><strong>Scoped</strong><small>fail-closed execution</small></article><article class="metric"><span>Readiness</span><strong [class.good]="readiness()">{{ readiness() ? 'READY' : 'CHECK' }}</strong><small>control-plane status</small></article></section>

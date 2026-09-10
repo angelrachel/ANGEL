@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: ANGEL-25 Authorized Security Validation API
+  title: ANGEL Authorized Security Validation API
   version: 1.0.0
   description: Typed control-plane API for authorized, scoped, non-destructive security validation.
 servers:
@@ -28,7 +28,7 @@ paths:
         '200': { description: Metrics snapshot }
   /api/v1/modules:
     get:
-      summary: List registered ANGEL-25 modules
+      summary: List registered ANGEL modules
       responses:
         '200': { description: Module catalog }
         '401': { description: Authentication required }

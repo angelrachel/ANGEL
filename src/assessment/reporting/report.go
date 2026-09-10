@@ -39,7 +39,7 @@ func New(engagementID string, findings []Finding, at time.Time) (Report, error) 
 	}
 	copyFindings := append([]Finding(nil), findings...)
 	sort.Slice(copyFindings, func(i, j int) bool { return copyFindings[i].ID < copyFindings[j].ID })
-	report := Report{EngagementID: engagementID, GeneratedAt: at.UTC(), EngineVersion: "ANGEL-25", Findings: copyFindings}
+	report := Report{EngagementID: engagementID, GeneratedAt: at.UTC(), EngineVersion: "ANGEL", Findings: copyFindings}
 	raw, _ := json.Marshal(report)
 	hash := sha256.Sum256(raw)
 	report.ID = hex.EncodeToString(hash[:])[:24]
@@ -86,7 +86,7 @@ func (r Report) JSON() ([]byte, error) {
 }
 func (r Report) Markdown() string {
 	var b strings.Builder
-	b.WriteString("# ANGEL-25 Security Validation Report\n\n")
+	b.WriteString("# ANGEL Security Validation Report\n\n")
 	b.WriteString(fmt.Sprintf("Engagement: `%s`\n\nGenerated: `%s`\n\n", r.EngagementID, r.GeneratedAt.Format(time.RFC3339)))
 	b.WriteString("## Findings\n\n")
 	for _, f := range r.Findings {

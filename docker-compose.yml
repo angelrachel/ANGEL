@@ -7,7 +7,7 @@ services:
       ANGEL_ENV: ${ANGEL_ENV:-development}
       ANGEL_HOST: 0.0.0.0
       ANGEL_PORT: 8001
-      ANGEL_DATABASE: /data/c2.db
+      ANGEL_DATABASE: /data/angel.db
       ANGEL_OPERATOR_KEY: ${ANGEL_OPERATOR_KEY:?ANGEL_OPERATOR_KEY must be set}
       ANGEL_SHARED_KEY: ${ANGEL_SHARED_KEY:?ANGEL_SHARED_KEY must be set}
       ANGEL_AUTH_SECRET: ${ANGEL_AUTH_SECRET:?ANGEL_AUTH_SECRET must be set}

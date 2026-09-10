@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_ROOTS = [ROOT / "src" / "c2"]
+DEFAULT_ROOTS = [ROOT / "src" / "assessment"]
 PATTERNS = {
     "ignored-command-error": re.compile(r"\.Run\(\)"),
     "success-literal": re.compile(r'Status\s*:\s*"success"|return\s+true'),
