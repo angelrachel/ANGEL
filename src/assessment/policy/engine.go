@@ -129,13 +129,13 @@ func allowedTarget(target string, scopes []domain.ScopeEntry, action string) boo
 		value := strings.ToLower(strings.TrimSpace(item.Value))
 		switch item.Kind {
 		case "hostname":
-			if target == value || (strings.HasPrefix(value, "*.") && strings.HasSuffix(target, strings.TrimPrefix(value, "*"))) {
+			if hostnameMatches(target, value) && portMatches(target, item.Ports) {
 				return true
 			}
 		case "url":
 			if u, err := url.Parse(target); err == nil {
 				scoped, parseErr := url.Parse(value)
-				if parseErr == nil && strings.EqualFold(u.Scheme, scoped.Scheme) && strings.EqualFold(u.Hostname(), scoped.Hostname()) {
+				if parseErr == nil && strings.EqualFold(u.Scheme, scoped.Scheme) && strings.EqualFold(u.Hostname(), scoped.Hostname()) && portMatches(target, item.Ports) {
 					return true
 				}
 			}
@@ -150,9 +150,71 @@ func allowedTarget(target string, scopes []domain.ScopeEntry, action string) boo
 			if strings.HasPrefix(target, "fixture:") && target == value {
 				return true
 			}
+		case "port":
+			if portMatches(target, []int{portValue(value)}) {
+				return true
+			}
+		case "path":
+			if u, err := url.Parse(target); err == nil && pathMatches(u.Path, value) {
+				return true
+			}
 		}
 	}
 	return false
+}
+
+func hostnameMatches(target, scoped string) bool {
+	if target == scoped {
+		return true
+	}
+	if !strings.HasPrefix(scoped, "*.") {
+		return false
+	}
+	suffix := strings.TrimPrefix(scoped, "*.")
+	return strings.HasSuffix(target, "."+suffix) && target != suffix
+}
+
+func pathMatches(target, scoped string) bool {
+	scoped = strings.TrimSpace(scoped)
+	if scoped == "" || scoped == "/" {
+		return true
+	}
+	target = "/" + strings.TrimPrefix(target, "/")
+	scoped = "/" + strings.TrimPrefix(scoped, "/")
+	return target == scoped || strings.HasPrefix(target, strings.TrimSuffix(scoped, "/")+"/")
+}
+
+func portMatches(target string, allowed []int) bool {
+	if len(allowed) == 0 {
+		return true
+	}
+	u, err := url.Parse(target)
+	if err != nil {
+		return false
+	}
+	port := u.Port()
+	if port == "" {
+		if u.Scheme == "https" {
+			port = "443"
+		} else if u.Scheme == "http" {
+			port = "80"
+		}
+	}
+	actual := portValue(port)
+	for _, candidate := range allowed {
+		if actual == candidate {
+			return true
+		}
+	}
+	return false
+}
+
+func portValue(value string) int {
+	var port int
+	if _, err := fmt.Sscanf(strings.TrimSpace(value), "%d", &port); err != nil {
+		return -1
+	}
+	return port
 }
 
 func deniedCapability(action string) bool {
