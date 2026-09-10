@@ -120,6 +120,40 @@ paths:
       responses:
         '201': { description: Remediation created }
         '400': { description: Invalid remediation contract }
+    patch:
+      summary: Transition remediation status
+      parameters:
+        - { name: id, in: query, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [OPEN, IN_PROGRESS, READY_FOR_RETEST, CLOSED] }
+      responses:
+        '200': { description: Remediation updated }
+        '409': { description: Invalid transition }
+  /api/v1/remediations/retest:
+    post:
+      summary: Record a remediation retest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [remediation_id, evidence_id, passed]
+              properties:
+                remediation_id: { type: string }
+                evidence_id: { type: string }
+                notes: { type: string }
+                passed: { type: boolean }
+      responses:
+        '201': { description: Retest recorded }
+        '409': { description: Remediation is not ready for retest }
   /api/v1/reports:
     get:
       summary: List integrity-protected reports
@@ -146,6 +180,36 @@ paths:
       responses:
         '200': { description: Snapshot and verification public key }
         '401': { description: Authentication required }
+  /api/v1/snapshot/validate:
+    post:
+      summary: Validate a signed snapshot before restore
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [snapshot, public_key]
+              properties:
+                snapshot: { type: object }
+                public_key: { type: string }
+      responses:
+        '200': { description: Snapshot validated }
+        '409': { description: Snapshot rejected }
+  /api/v1/reports/export:
+    get:
+      summary: Export a report as JSON or Markdown
+      parameters:
+        - { name: report_id, in: query, required: true, schema: { type: string } }
+        - { name: format, in: query, schema: { type: string, enum: [json, markdown], default: json } }
+      responses:
+        '200': { description: Report export }
+        '404': { description: Report not found }
+  /api/v1/audit/verify:
+    get:
+      summary: Verify the audit hash chain
+      responses:
+        '200': { description: Audit verification result }
   /v1/simulation/tasks:
     post:
       summary: Submit a fixture-backed compatibility simulation task

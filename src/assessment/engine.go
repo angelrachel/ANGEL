@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/subtle"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -466,7 +467,52 @@ func (e *Engine) Start(ctx context.Context) error {
 			writeJSON(w, http.StatusCreated, item)
 			return
 		}
+		if r.Method == http.MethodPatch {
+			id := strings.TrimSpace(r.URL.Query().Get("id"))
+			var request struct {
+				Status string `json:"status"`
+			}
+			if id == "" || decodeJSON(w, r, &request) != nil {
+				http.Error(w, "invalid remediation update", http.StatusBadRequest)
+				return
+			}
+			if err := e.remediation.Update(id, request.Status, time.Now().UTC()); err != nil {
+				http.Error(w, err.Error(), http.StatusConflict)
+				return
+			}
+			item, _ := e.remediation.Get(id)
+			e.audit.Append("operator", "REMEDIATION_UPDATED", "remediation", id, time.Now().UTC())
+			writeJSON(w, http.StatusOK, item)
+			return
+		}
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	})
+	mux.HandleFunc("/api/v1/remediations/retest", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if err := e.auth(r); err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		var request struct {
+			RemediationID string `json:"remediation_id"`
+			EvidenceID    string `json:"evidence_id"`
+			Notes         string `json:"notes"`
+			Passed        bool   `json:"passed"`
+		}
+		if err := decodeJSON(w, r, &request); err != nil {
+			http.Error(w, "invalid retest contract", http.StatusBadRequest)
+			return
+		}
+		item, err := e.remediation.RecordRetest(request.RemediationID, request.EvidenceID, request.Notes, request.Passed, time.Now().UTC())
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusConflict)
+			return
+		}
+		e.audit.Append("operator", "RETEST_RECORDED", "remediation", request.RemediationID, item.TestedAt)
+		writeJSON(w, http.StatusCreated, item)
 	})
 	mux.HandleFunc("/api/v1/snapshot", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -496,6 +542,66 @@ func (e *Engine) Start(ctx context.Context) error {
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"snapshot": snapshot, "public_key": fmt.Sprintf("%x", e.snapshotSigner.Public)})
 	})
+	mux.HandleFunc("/api/v1/snapshot/validate", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if err := e.auth(r); err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		var request struct {
+			Snapshot  persistence.Snapshot `json:"snapshot"`
+			PublicKey string               `json:"public_key"`
+		}
+		if err := decodeJSON(w, r, &request); err != nil {
+			http.Error(w, "invalid snapshot validation contract", http.StatusBadRequest)
+			return
+		}
+		key, err := hex.DecodeString(strings.TrimSpace(request.PublicKey))
+		if err != nil {
+			http.Error(w, "invalid snapshot public key", http.StatusBadRequest)
+			return
+		}
+		result, err := persistence.Validate(request.Snapshot, key, persistence.RestorePolicy{RequireAuditChain: true, RequireEvidenceHashes: true})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusConflict)
+			return
+		}
+		writeJSON(w, http.StatusOK, result)
+	})
+	mux.HandleFunc("/api/v1/reports/export", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if err := e.auth(r); err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		id := strings.TrimSpace(r.URL.Query().Get("report_id"))
+		format := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("format")))
+		e.mu.RLock()
+		report, ok := e.reports[id]
+		e.mu.RUnlock()
+		if !ok {
+			http.Error(w, "report not found", http.StatusNotFound)
+			return
+		}
+		if format == "markdown" {
+			w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
+			_, _ = w.Write([]byte(report.Markdown()))
+			return
+		}
+		raw, err := report.JSON()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusConflict)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(raw)
+	})
 	mux.HandleFunc("/api/v1/audit", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -506,6 +612,18 @@ func (e *Engine) Start(ctx context.Context) error {
 			return
 		}
 		writeJSON(w, http.StatusOK, e.audit.List())
+	})
+	mux.HandleFunc("/api/v1/audit/verify", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if err := e.auth(r); err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		events := e.audit.List()
+		writeJSON(w, http.StatusOK, map[string]any{"valid": governance.Verify(events), "events": len(events)})
 	})
 
 	mux.HandleFunc("/api/v1/register", func(w http.ResponseWriter, r *http.Request) {

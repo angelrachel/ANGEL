@@ -12,6 +12,9 @@ func TestRemediationRetestClosesFinding(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if err := tracker.Update(remediation.ID, "IN_PROGRESS", now); err != nil {
+		t.Fatal(err)
+	}
 	if err := tracker.Update(remediation.ID, "READY_FOR_RETEST", now); err != nil {
 		t.Fatal(err)
 	}

@@ -37,6 +37,9 @@ func (t *Tracker) Create(findingID, owner, plan string, due time.Time) (Remediat
 	if strings.TrimSpace(findingID) == "" || strings.TrimSpace(owner) == "" || strings.TrimSpace(plan) == "" {
 		return Remediation{}, fmt.Errorf("finding, owner, and plan are required")
 	}
+	if due.IsZero() {
+		return Remediation{}, fmt.Errorf("due date is required")
+	}
 	r := Remediation{ID: fmt.Sprintf("rem-%d", time.Now().UnixNano()), FindingID: findingID, Owner: owner, Plan: plan, DueAt: due.UTC(), Status: "OPEN", UpdatedAt: time.Now().UTC()}
 	t.mu.Lock()
 	t.remediation[r.ID] = r
@@ -56,10 +59,25 @@ func (t *Tracker) Update(id, status string, at time.Time) error {
 	if r.Status == "CLOSED" {
 		return fmt.Errorf("closed remediation cannot be changed")
 	}
+	if !legalTransition(r.Status, status) {
+		return fmt.Errorf("invalid remediation transition %s -> %s", r.Status, status)
+	}
 	r.Status = status
 	r.UpdatedAt = at.UTC()
 	t.remediation[id] = r
 	return nil
+}
+func legalTransition(from, to string) bool {
+	switch from {
+	case "OPEN":
+		return to == "IN_PROGRESS" || to == "CLOSED"
+	case "IN_PROGRESS":
+		return to == "READY_FOR_RETEST" || to == "OPEN"
+	case "READY_FOR_RETEST":
+		return to == "IN_PROGRESS" || to == "CLOSED"
+	default:
+		return false
+	}
 }
 func (t *Tracker) RecordRetest(remediationID, evidenceID, notes string, passed bool, at time.Time) (Retest, error) {
 	t.mu.Lock()
@@ -91,13 +109,23 @@ func (t *Tracker) Get(id string) (Remediation, bool) {
 	r, ok := t.remediation[id]
 	return r, ok
 }
-
 func (t *Tracker) List() []Remediation {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	out := make([]Remediation, 0, len(t.remediation))
 	for _, item := range t.remediation {
 		out = append(out, item)
+	}
+	return out
+}
+func (t *Tracker) Retests(remediationID string) []Retest {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	out := []Retest{}
+	for _, item := range t.retests {
+		if item.RemediationID == remediationID {
+			out = append(out, item)
+		}
 	}
 	return out
 }
