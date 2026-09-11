@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://angel.local/contracts/task/lab-agent.schema.json",
+  "title": "ANGEL lab agent simulation protocol",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "agent_id", "engagement_id", "action", "fixture_ref"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "agent_id": { "type": "string", "minLength": 1 },
+    "engagement_id": { "type": "string", "minLength": 1 },
+    "action": {
+      "type": "string",
+      "enum": ["observe", "simulate", "collect-evidence", "validate-control"]
+    },
+    "fixture_ref": { "type": "string", "pattern": "^fixture://" },
+    "parameters": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    }
+  }
+}

@@ -37,6 +37,8 @@ Proof berisiko dilakukan hanya pada controlled lab menggunakan synthetic data, c
 - `lab/` — fixture HTTP disposable dan acceptance tests.
 - `deploy/` — deployment, validation, dan infrastructure manifests.
 - `simulation/` — synthetic task/result fixtures untuk replay dan negative tests.
+- `src/assessment/agent/` — lab agent simulator fixture-only dengan typed task/result dan digest evidence.
+- `contracts/task/lab-agent.schema.json` — contract untuk task simulator yang menolak target produksi dan arbitrary command.
 - `docs/BLUEPRINT_ALIGNMENT.md` — matriks alignment blueprint 25 layer dan definition of done.
 
 ## Arsitektur yang didukung

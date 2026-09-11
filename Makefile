@@ -17,6 +17,7 @@ static-check:
 
 safe-contracts:
 	python3 scripts/validate_safe_contracts.py
+	python3 scripts/validate_lab_agent_contract.py
 
 frontend-build:
 	npm --prefix apps/frontend-angular run build
