@@ -55,6 +55,22 @@ def build_plan(task: Task) -> Plan:
     }
 
 
+def approve_plan(plan: Plan, approval_id: str) -> Plan:
+    """Move a fixture plan to authorized simulation only with an explicit approval ID."""
+    if not str(plan.get("task_id", "")).strip():
+        raise ValueError("plan task_id is required")
+    if not str(plan.get("target_ref", "")).startswith("fixture://"):
+        raise ValueError("plan target must use fixture://")
+    if not str(approval_id).strip():
+        raise ValueError("approval_id is required")
+    approved = dict(plan)
+    approved["authorized"] = True
+    approved["status"] = "approved"
+    approved["steps"] = [*plan.get("steps", []), "record_approval", "execute_bounded_simulation"]
+    approved["message"] = "explicit approval recorded; bounded simulation may proceed"
+    return approved
+
+
 def run(task: Task) -> Plan:
     graph = StateGraph(dict)
     graph.add_node("plan", lambda state: {"plan": build_plan(state["task"])})

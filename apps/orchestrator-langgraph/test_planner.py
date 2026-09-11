@@ -1,6 +1,6 @@
 import unittest
 
-from planner import build_plan
+from planner import approve_plan, build_plan
 
 
 class PlannerTests(unittest.TestCase):
@@ -32,6 +32,16 @@ class PlannerTests(unittest.TestCase):
         task["mode"] = "active"
         with self.assertRaisesRegex(ValueError, "observe or simulate"):
             build_plan(task)
+
+    def test_approval_transitions_fixture_plan(self):
+        approved = approve_plan(build_plan(self.valid_task()), "approval-1")
+        self.assertEqual(approved["status"], "approved")
+        self.assertTrue(approved["authorized"])
+        self.assertIn("record_approval", approved["steps"])
+
+    def test_approval_requires_identifier(self):
+        with self.assertRaisesRegex(ValueError, "approval_id"):
+            approve_plan(build_plan(self.valid_task()), "")
 
 
 if __name__ == "__main__":
