@@ -256,10 +256,5 @@ func portValue(value string) int {
 	return port
 }
 func deniedCapability(action string) bool {
-	switch strings.ToLower(strings.TrimSpace(action)) {
-	case "credential-collection", "credential-extraction", "persistence", "destructive-write", "log-deletion", "covert-channel", "process-injection", "evasion", "data-exfiltration", "arbitrary-command":
-		return true
-	default:
-		return false
-	}
+	return CapabilityDenied(strings.ToLower(strings.TrimSpace(action)))
 }

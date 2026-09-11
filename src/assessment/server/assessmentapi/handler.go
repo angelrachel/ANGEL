@@ -9,6 +9,7 @@ import (
 	"ANGEL/src/assessment/checks"
 	"ANGEL/src/assessment/control"
 	"ANGEL/src/assessment/plugins"
+	"ANGEL/src/assessment/policy"
 )
 
 type Handler struct{ Controller *control.Controller }
@@ -37,10 +38,11 @@ func (h Handler) Routes() http.Handler {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
+		allowed, denied := policy.CapabilityPolicy()
 		writeJSON(w, http.StatusOK, map[string]any{
 			"default_decision": "deny",
-			"allowed":          []string{"surface-map", "tls-assessment", "api-contract", "authorization-matrix", "evidence-collection", "dependency-inventory", "detection-validation", "synthetic-canary", "lab-proof", "lab-agent-simulation"},
-			"denied":           []string{"credential-collection", "credential-extraction", "persistence", "destructive-write", "log-deletion", "covert-channel", "process-injection", "evasion", "data-exfiltration", "arbitrary-command"},
+			"allowed":          allowed,
+			"denied":           denied,
 		})
 	})
 	mux.HandleFunc("/api/v1/jobs", h.jobs)
