@@ -3,7 +3,10 @@ package crypto
 import "testing"
 
 func TestAESGCMRoundTrip(t *testing.T) {
-	cipher := NewAESGCM("test-key")
+	cipher, err := NewAESGCM("test-key")
+	if err != nil {
+		t.Fatalf("new cipher failed: %v", err)
+	}
 	plaintext := []byte("authorized simulation metadata")
 	encoded, err := cipher.Encrypt(plaintext)
 	if err != nil {
@@ -19,7 +22,10 @@ func TestAESGCMRoundTrip(t *testing.T) {
 }
 
 func TestAESGCMRejectsTruncatedAndTamperedCiphertext(t *testing.T) {
-	cipher := NewAESGCM("test-key")
+	cipher, err := NewAESGCM("test-key")
+	if err != nil {
+		t.Fatalf("new cipher failed: %v", err)
+	}
 	if _, err := cipher.Decrypt([]byte{1, 2}); err == nil {
 		t.Fatal("expected truncated ciphertext error")
 	}

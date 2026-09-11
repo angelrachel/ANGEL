@@ -12,7 +12,10 @@ func TestEngineRestoresDurableSignedJobState(t *testing.T) {
 	path := t.TempDir() + "/angel-state.json"
 	t.Setenv("ANGEL_STATE_PATH", path)
 	now := time.Now().UTC()
-	first := NewEngine()
+	first, err := NewEngine()
+	if err != nil {
+		t.Fatal(err)
+	}
 	engagement := domain.Engagement{ID: "persist-eng", Organization: "org", Authorized: true, StartsAt: now.Add(-time.Minute), EndsAt: now.Add(time.Hour)}
 	if err := first.policyEngine.RegisterEngagement(engagement, []domain.ScopeEntry{{Kind: "fixture", Value: "fixture://lab/web", Actions: []string{"surface-map"}}}, 2); err != nil {
 		t.Fatal(err)
@@ -23,7 +26,10 @@ func TestEngineRestoresDurableSignedJobState(t *testing.T) {
 	}
 	first.audit.Append("operator", "PERSISTENCE_TEST", "engagement", engagement.ID, now)
 	first.persistState()
-	second := NewEngine()
+	second, err := NewEngine()
+	if err != nil {
+		t.Fatal(err)
+	}
 	restored, ok := second.jobController.Get(job.ID)
 	if !ok || restored.ID != job.ID || !second.jobController.Verify(restored) {
 		t.Fatalf("restored=%#v ok=%v", restored, ok)

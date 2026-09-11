@@ -88,7 +88,7 @@ type Engine struct {
 	durableState   *storage.FileStore
 }
 
-func NewEngine() *Engine {
+func NewEngine() (*Engine, error) {
 	policyEngine := policy.NewEngine()
 	var durableState *storage.FileStore
 	var persisted storage.PersistentState
@@ -96,7 +96,7 @@ func NewEngine() *Engine {
 		var err error
 		durableState, persisted, err = storage.OpenFileStore(path)
 		if err != nil {
-			panic(err)
+			return nil, fmt.Errorf("open durable state: %w", err)
 		}
 	}
 	var jobController *control.Controller
@@ -105,28 +105,32 @@ func NewEngine() *Engine {
 		private, privateErr := hex.DecodeString(persisted.ControllerPrivate)
 		public, publicErr := hex.DecodeString(persisted.ControllerPublic)
 		if privateErr != nil || publicErr != nil {
-			panic("invalid persisted controller keys")
+			return nil, fmt.Errorf("invalid persisted controller keys: %v/%v", privateErr, publicErr)
 		}
 		jobController, err = control.NewControllerWithKeys(policyEngine, private, public)
 	} else {
 		jobController, err = control.NewController(policyEngine)
 	}
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("create job controller: %w", err)
 	}
 	if len(persisted.Policy) > 0 {
 		if err := policyEngine.Restore(persisted.Policy); err != nil {
-			panic(err)
+			return nil, fmt.Errorf("restore policy: %w", err)
 		}
 	}
 	if len(persisted.Jobs) > 0 {
 		if err := jobController.Restore(persisted.Jobs); err != nil {
-			panic(err)
+			return nil, fmt.Errorf("restore jobs: %w", err)
 		}
 	}
 	signer, err := evidence.NewSigner()
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("evidence signer: %w", err)
+	}
+	snapshotSigner, signerErr := persistence.NewSigner()
+	if signerErr != nil {
+		return nil, fmt.Errorf("snapshot signer: %w", signerErr)
 	}
 	engine := &Engine{
 		agents:         make(map[string]*Agent),
@@ -146,15 +150,9 @@ func NewEngine() *Engine {
 		audit:          governance.NewAuditLog(),
 		remediation:    risk.NewTracker(),
 		limiter:        ratelimit.New(20, 40),
-		snapshotSigner: func() persistence.Signer {
-			signer, err := persistence.NewSigner()
-			if err != nil {
-				panic(err)
-			}
-			return signer
-		}(),
-		metrics:      metrics.New(),
-		durableState: durableState,
+		snapshotSigner: snapshotSigner,
+		metrics:        metrics.New(),
+		durableState:   durableState,
 	}
 	for _, item := range persisted.Evidence {
 		engine.evidence[item.ID] = item
@@ -170,13 +168,13 @@ func NewEngine() *Engine {
 	}
 	if len(persisted.Audit) > 0 {
 		if err := engine.audit.Restore(persisted.Audit); err != nil {
-			panic(err)
+			return nil, fmt.Errorf("restore audit: %w", err)
 		}
 	}
 	if durableState != nil {
 		engine.persistState()
 	}
-	return engine
+	return engine, nil
 }
 
 func envOr(name, fallback string) string {
@@ -962,7 +960,11 @@ func (e *Engine) Start(ctx context.Context) error {
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
-	engine := NewEngine()
+	engine, err := NewEngine()
+	if err != nil {
+		fmt.Println("[FATAL] Engine failed:", err)
+		os.Exit(1)
+	}
 	if err := engine.Start(ctx); err != nil {
 		fmt.Println("[FATAL] Engine failed:", err)
 		os.Exit(1)

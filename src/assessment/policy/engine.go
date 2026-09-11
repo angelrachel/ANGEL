@@ -215,6 +215,7 @@ func hostnameMatches(target, scoped string) bool {
 	suffix := strings.TrimPrefix(scoped, "*.")
 	return strings.HasSuffix(target, "."+suffix) && target != suffix
 }
+
 func pathMatches(target, scoped string) bool {
 	scoped = strings.TrimSpace(scoped)
 	if scoped == "" || scoped == "/" {
@@ -224,6 +225,7 @@ func pathMatches(target, scoped string) bool {
 	scoped = "/" + strings.TrimPrefix(scoped, "/")
 	return target == scoped || strings.HasPrefix(target, strings.TrimSuffix(scoped, "/")+"/")
 }
+
 func portMatches(target string, allowed []int) bool {
 	if len(allowed) == 0 {
 		return true
@@ -248,6 +250,7 @@ func portMatches(target string, allowed []int) bool {
 	}
 	return false
 }
+
 func portValue(value string) int {
 	var port int
 	if _, err := fmt.Sscanf(strings.TrimSpace(value), "%d", &port); err != nil {
@@ -255,6 +258,7 @@ func portValue(value string) int {
 	}
 	return port
 }
+
 func deniedCapability(action string) bool {
 	return CapabilityDenied(strings.ToLower(strings.TrimSpace(action)))
 }

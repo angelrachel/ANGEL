@@ -26,7 +26,7 @@ gateway-test:
 	dotnet test apps/gateway-dotnet.tests/AngelGateway.Tests.csproj
 
 planner-test:
-	.venv-langgraph/bin/python -m unittest discover -s apps/orchestrator-langgraph -p 'test_*.py'
+	cd apps/orchestrator-langgraph && .venv-langgraph/bin/python -m unittest discover -s . -p 'test_*.py'
 
 lab-check:
 	cd lab/services/fixture-http && go test ./...

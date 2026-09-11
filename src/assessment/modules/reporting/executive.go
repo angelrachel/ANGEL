@@ -21,8 +21,8 @@ type Report struct {
 	Findings  []Finding
 }
 
-func GenerateReport(title string, findings []Finding) Report {
-	now := time.Now().UTC()
+// GenerateReportAt creates a report at a specific time for deterministic testing.
+func GenerateReportAt(title string, findings []Finding, now time.Time) Report {
 	hash := sha256.Sum256([]byte(title + now.String()))
 	return Report{
 		ID:        hex.EncodeToString(hash[:]),
@@ -31,6 +31,11 @@ func GenerateReport(title string, findings []Finding) Report {
 		EndTime:   now.Format(time.RFC3339),
 		Findings:  findings,
 	}
+}
+
+// GenerateReport creates a report at the current time.
+func GenerateReport(title string, findings []Finding) Report {
+	return GenerateReportAt(title, findings, time.Now().UTC())
 }
 
 func (r *Report) Markdown() string {

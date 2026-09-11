@@ -13,7 +13,10 @@ func TestControlPlaneHTTPIntegration(t *testing.T) {
 	t.Setenv("ANGEL_OPERATOR_KEY", "integration-secret")
 	t.Setenv("ANGEL_HOST", "127.0.0.1")
 	t.Setenv("ANGEL_PORT", "18081")
-	engine := NewEngine()
+	engine, err := NewEngine()
+	if err != nil {
+		t.Fatal(err)
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go func() { _ = engine.Start(ctx) }()

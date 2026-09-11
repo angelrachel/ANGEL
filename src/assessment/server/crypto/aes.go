@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"errors"
+	"fmt"
 	"io"
 	"time"
 )
@@ -14,17 +15,17 @@ type AESGCM struct {
 	AEAD cipher.AEAD
 }
 
-func NewAESGCM(key string) *AESGCM {
+func NewAESGCM(key string) (*AESGCM, error) {
 	hash := sha256.Sum256([]byte(key))
 	block, err := aes.NewCipher(hash[:])
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("aes cipher: %w", err)
 	}
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("gcm: %w", err)
 	}
-	return &AESGCM{AEAD: gcm}
+	return &AESGCM{AEAD: gcm}, nil
 }
 
 func (a *AESGCM) Encrypt(data []byte) ([]byte, error) {
