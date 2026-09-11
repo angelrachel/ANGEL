@@ -192,3 +192,7 @@ Gunakan bahasa Indonesia dan hanya nyatakan pekerjaan yang benar-benar terbukti.
 9. cara menjalankan dan mereset lab.
 
 Jangan mengatakan “selesai 100%” jika satu requirement masih `PLANNED`, `IN_PROGRESS`, `BLOCKED`, atau `NEEDS-HUMAN-DECISION`.
+
+## Repository aktual — aturan wajib
+
+Sebelum implementasi, baca `docs/ANGEL_IMPLEMENTATION_ALIGNMENT.md`. Repository ini memakai path canonical yang sudah ada (`src/assessment/`, `apps/`, `contracts/`, `lab/`, `simulation/`, `deploy/`); jangan membuat duplikasi `packages/`, `domains/`, `migrations/`, `tests/`, atau `deployments/` hanya untuk mencocokkan nama logical blueprint. Isi `REQUIREMENTS-TRACEABILITY.md`, `TEST-MATRIX.md`, `ACCEPTANCE-CRITERIA.md`, dan `OPEN-DECISIONS.md` berdasarkan artifact aktual. Jangan mengklaim `VERIFIED` tanpa command dan test lulus.
