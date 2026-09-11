@@ -1,6 +1,7 @@
 package assessmentapi
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -62,5 +63,43 @@ func TestCatalogEndpointsRejectWrites(t *testing.T) {
 		if response.Code != http.StatusMethodNotAllowed {
 			t.Fatalf("%s status = %d", path, response.Code)
 		}
+	}
+}
+
+func TestFixtureExecutionEndpointRunsRegisteredCheck(t *testing.T) {
+	controller, err := control.NewController(policy.NewEngine())
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := (Handler{Controller: controller}).Routes()
+	body := bytes.NewBufferString(`{"job_id":"job-1","target":"fixture://http/security","check_id":"web-security-headers","fixture":{"headers":{"Content-Security-Policy":"default-src 'self'","X-Content-Type-Options":"nosniff","Referrer-Policy":"no-referrer","Strict-Transport-Security":"max-age=31536000"}}}`)
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodPost, "/api/v1/executions", body))
+	if response.Code != http.StatusCreated {
+		t.Fatalf("execution status = %d body=%s", response.Code, response.Body.String())
+	}
+	var output struct {
+		Status  string `json:"status"`
+		CheckID string `json:"check_id"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "COMPLETED" || output.CheckID != "web-security-headers" {
+		t.Fatalf("unexpected execution output: %+v", output)
+	}
+}
+
+func TestFixtureExecutionEndpointRejectsProductionTarget(t *testing.T) {
+	controller, err := control.NewController(policy.NewEngine())
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := (Handler{Controller: controller}).Routes()
+	body := bytes.NewBufferString(`{"job_id":"job-1","target":"https://production.example","check_id":"web-security-headers"}`)
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodPost, "/api/v1/executions", body))
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("execution status = %d", response.Code)
 	}
 }

@@ -8,6 +8,7 @@ import (
 
 	"ANGEL/src/assessment/checks"
 	"ANGEL/src/assessment/control"
+	"ANGEL/src/assessment/execution"
 	"ANGEL/src/assessment/plugins"
 	"ANGEL/src/assessment/policy"
 )
@@ -45,9 +46,33 @@ func (h Handler) Routes() http.Handler {
 			"denied":           denied,
 		})
 	})
+	mux.HandleFunc("/api/v1/executions", h.execute)
 	mux.HandleFunc("/api/v1/jobs", h.jobs)
 	return mux
 }
+
+func (h Handler) execute(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	var request execution.Input
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 128<<10)).Decode(&request); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid execution request"})
+		return
+	}
+	if strings.TrimSpace(request.JobID) == "" || strings.TrimSpace(request.CheckID) == "" || !strings.HasPrefix(strings.ToLower(strings.TrimSpace(request.Target)), "fixture://") {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "job_id, check_id, and fixture:// target are required"})
+		return
+	}
+	output, err := execution.NewRegistry().Run(r.Context(), request)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusCreated, output)
+}
+
 func (h Handler) jobs(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
