@@ -38,6 +38,18 @@ paths:
       responses:
         '200': { description: Platform identity, layer count, and denied capabilities }
         '401': { description: Authentication required }
+  /api/v1/checks:
+    get:
+      summary: List registered safe assessment checks
+      responses:
+        '200': { description: Stable check identifiers for typed execution }
+        '401': { description: Authentication required }
+  /api/v1/capabilities:
+    get:
+      summary: Return the versioned capability allow and deny boundary
+      responses:
+        '200': { description: Deny-by-default capability policy }
+        '401': { description: Authentication required }
   /api/v1/reports/artifact:
     get:
       summary: Render a stored report as JSON, Markdown, or HTML
