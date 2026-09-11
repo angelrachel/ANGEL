@@ -19,6 +19,7 @@ jobs:
       - run: go vet ./src/...
       - run: go build ./src/...
       - run: go test ./src/...
+      - run: go test ./lab/services/fixture-http/...
 
   security:
     runs-on: ubuntu-latest
@@ -30,6 +31,7 @@ jobs:
           python-version: '3.12'
       - run: python3 scripts/repo_integrity_check.py
       - run: python3 scripts/validate_safe_contracts.py
+      - run: python3 scripts/validate_lab_agent_contract.py
       - run: python3 scripts/static_success_checker.py
       - run: bash -n deploy/scripts/deploy.sh deploy/scripts/destroy.sh deploy/scripts/validate.sh
       - run: go install github.com/zricethezav/gitleaks/v8@latest
