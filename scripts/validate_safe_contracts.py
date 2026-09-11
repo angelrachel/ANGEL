@@ -60,6 +60,7 @@ def main() -> int:
     require("/healthz:" in openapi, "OpenAPI health path is missing")
     require("/api/v1/platform:" in openapi, "OpenAPI platform manifest path is missing")
     require("/api/v1/checks:" in openapi, "OpenAPI checks catalog path is missing")
+    require("/api/v1/check-catalog:" in openapi, "OpenAPI typed check catalog path is missing")
     require("/api/v1/capabilities:" in openapi, "OpenAPI capabilities path is missing")
     require("/v1/simulation/tasks:" in openapi, "OpenAPI simulation path is missing")
     task = load_json(ROOT / "simulation/fixtures/tasks/recon-http.json")

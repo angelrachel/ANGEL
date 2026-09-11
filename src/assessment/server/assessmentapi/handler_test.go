@@ -57,12 +57,35 @@ func TestCatalogEndpointsRejectWrites(t *testing.T) {
 		t.Fatal(err)
 	}
 	handler := (Handler{Controller: controller}).Routes()
-	for _, path := range []string{"/api/v1/checks", "/api/v1/capabilities"} {
+	for _, path := range []string{"/api/v1/checks", "/api/v1/check-catalog", "/api/v1/capabilities"} {
 		response := httptest.NewRecorder()
 		handler.ServeHTTP(response, httptest.NewRequest(http.MethodPost, path, nil))
 		if response.Code != http.StatusMethodNotAllowed {
 			t.Fatalf("%s status = %d", path, response.Code)
 		}
+	}
+}
+
+func TestTypedCheckCatalogEndpoint(t *testing.T) {
+	controller, err := control.NewController(policy.NewEngine())
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := (Handler{Controller: controller}).Routes()
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/v1/check-catalog", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("catalog status = %d", response.Code)
+	}
+	var catalog []struct {
+		ID    string `json:"id"`
+		Layer int    `json:"layer"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &catalog); err != nil {
+		t.Fatal(err)
+	}
+	if len(catalog) < 20 || catalog[0].ID == "" || catalog[0].Layer < 1 {
+		t.Fatalf("unexpected catalog: %+v", catalog)
 	}
 }
 

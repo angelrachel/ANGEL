@@ -44,6 +44,12 @@ paths:
       responses:
         '200': { description: Stable check identifiers for typed execution }
         '401': { description: Authentication required }
+  /api/v1/check-catalog:
+    get:
+      summary: List safe checks with blueprint layer metadata
+      responses:
+        '200': { description: Typed check descriptors sorted by layer and identifier }
+        '401': { description: Authentication required }
   /api/v1/capabilities:
     get:
       summary: Return the versioned capability allow and deny boundary

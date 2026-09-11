@@ -34,6 +34,13 @@ func (h Handler) Routes() http.Handler {
 		}
 		writeJSON(w, http.StatusOK, checks.IDs())
 	})
+	mux.HandleFunc("/api/v1/check-catalog", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		writeJSON(w, http.StatusOK, checks.Catalog())
+	})
 	mux.HandleFunc("/api/v1/capabilities", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			w.WriteHeader(http.StatusMethodNotAllowed)
