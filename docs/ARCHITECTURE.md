@@ -1,5 +1,7 @@
 # ANGEL Architecture
 
+See [`BLUEPRINT_ALIGNMENT.md`](BLUEPRINT_ALIGNMENT.md) for the complete 25-layer mapping and [`SAFE_EQUIVALENT_ROADMAP.md`](SAFE_EQUIVALENT_ROADMAP.md) for implementation priorities. The architecture preserves the blueprint's separation of frontend, gateway, orchestration, assessment execution, infrastructure, evidence, and reporting while enforcing a safe authorized-assessment boundary.
+
 ## Control flow
 
 ```text
@@ -29,6 +31,8 @@ The risk engine combines exploitability, reachability, authentication requiremen
 ANGEL supports passive discovery, bounded network and web checks, API contract validation, authorization and tenant isolation checks, read-only identity/cloud/endpoint posture, detection validation, supply-chain inventory, synthetic canary proof, controlled callback markers, lab fixtures, evidence capture, scoring, reporting, remediation, retest, and cleanup.
 
 The following capabilities are denied at the policy layer: credential collection or extraction, persistence, destructive write, log deletion, covert channel, process injection, evasion, data exfiltration, and arbitrary command execution. Production-dangerous proof is moved to a disposable lab with synthetic data and reset verification.
+
+The assessment task runner is the safe equivalent of a blueprint tasking/C2 layer: it provides typed jobs, queueing, cancellation, bounded adapters, result persistence, and audit evidence. It does not provide hidden implants, covert listeners, persistence, or arbitrary remote execution. A lab agent simulator may be used only with disposable fixtures and synthetic markers.
 
 ## Deployment boundary
 

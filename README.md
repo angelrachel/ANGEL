@@ -2,6 +2,8 @@
 
 **ANGEL** adalah platform **Authorized Security Validation and Exposure Management** untuk menemukan, memvalidasi, memprioritaskan, melaporkan, dan melakukan retest terhadap risiko keamanan secara terotorisasi, aman, dapat diaudit, dan dapat direproduksi.
 
+> **Blueprint alignment:** lihat [`docs/BLUEPRINT_ALIGNMENT.md`](docs/BLUEPRINT_ALIGNMENT.md) untuk pemetaan blueprint 25 layer, status implementasi, safe equivalent, dan capability yang sengaja ditolak.
+
 ## Prinsip operasi
 
 ANGEL menerapkan **policy before execution**, typed actions, evidence-first, human-controlled risk, least privilege, reproducibility, fail-closed behavior, separation of duties, dan production-safe defaults. Platform ini tidak menyediakan covert malware, credential theft, persistence tersembunyi, process injection, log deletion, arbitrary command execution, destructive actions, atau data exfiltration.
@@ -35,6 +37,13 @@ Proof berisiko dilakukan hanya pada controlled lab menggunakan synthetic data, c
 - `lab/` — fixture HTTP disposable dan acceptance tests.
 - `deploy/` — deployment, validation, dan infrastructure manifests.
 - `simulation/` — synthetic task/result fixtures untuk replay dan negative tests.
+- `docs/BLUEPRINT_ALIGNMENT.md` — matriks alignment blueprint 25 layer dan definition of done.
+
+## Arsitektur yang didukung
+
+ANGEL mempertahankan pembagian komponen yang sejalan dengan blueprint—frontend Angular, gateway .NET 10, orchestrator LangGraph, brain, infrastructure manifests, evidence, reporting, dan lab—dengan batas capability yang aman. Istilah seperti **agent**, **task runner**, dan **deception lab** berarti komponen terkontrol untuk assessment yang diotorisasi; istilah tersebut tidak berarti implant tersembunyi, covert C2, persistence, credential theft, evasion, arbitrary command execution, data exfiltration, atau destructive payload.
+
+Komponen yang berbahaya untuk operasi produksi diganti dengan disposable fixture, synthetic marker, typed adapter, dan controlled callback. Semua execution tetap melewati authorization, scope, time window, rate budget, approval, audit, dan emergency stop.
 
 ## Jalankan lokal
 
