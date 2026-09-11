@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"ANGEL/src/assessment/checks"
 	"ANGEL/src/assessment/control"
 	"ANGEL/src/assessment/plugins"
 )
@@ -23,6 +24,24 @@ func (h Handler) Routes() http.Handler {
 			return
 		}
 		writeJSON(w, http.StatusOK, plugins.Catalog())
+	})
+	mux.HandleFunc("/api/v1/checks", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		writeJSON(w, http.StatusOK, checks.IDs())
+	})
+	mux.HandleFunc("/api/v1/capabilities", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{
+			"default_decision": "deny",
+			"allowed":          []string{"surface-map", "tls-assessment", "api-contract", "authorization-matrix", "evidence-collection", "dependency-inventory", "detection-validation", "synthetic-canary", "lab-proof", "lab-agent-simulation"},
+			"denied":           []string{"credential-collection", "credential-extraction", "persistence", "destructive-write", "log-deletion", "covert-channel", "process-injection", "evasion", "data-exfiltration", "arbitrary-command"},
+		})
 	})
 	mux.HandleFunc("/api/v1/jobs", h.jobs)
 	return mux

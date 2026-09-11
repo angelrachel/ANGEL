@@ -49,7 +49,7 @@ type Check interface {
 }
 
 func Registry() []Check {
-	return []Check{SecurityHeaders{}, TLSPosture{}, HTTPMethodPolicy{}, ContentTypePolicy{}, APISchema{}, AuthorizationMatrix{}, SecretExposure{}, DependencyPosture{}, CloudIdentityPosture{}, EndpointLogging{}, RecoveryControl{}, EvidenceIntegrity{}, AuthenticationPosture{}, TenantIsolation{}, SSRFCanary{}, APIRateLimit{}, PrivilegePath{}, DetectionLatency{}, SupplyChainProvenance{}, RecoveryMeasurement{}}
+	return []Check{SecurityHeaders{}, TLSPosture{}, HTTPMethodPolicy{}, ContentTypePolicy{}, APISchema{}, AuthorizationMatrix{}, SecretExposure{}, DependencyPosture{}, CloudIdentityPosture{}, EndpointLogging{}, RecoveryControl{}, EvidenceIntegrity{}, AuthenticationPosture{}, TenantIsolation{}, SSRFCanary{}, APIRateLimit{}, PrivilegePath{}, DetectionLatency{}, SupplyChainProvenance{}, RecoveryMeasurement{}, CookiePolicy{}, CORSPosture{}, CacheControlPolicy{}, InformationDisclosure{}, HeaderDisclosure{}, BackupPosture{}}
 }
 func Find(id string) (Check, bool) {
 	for _, check := range Registry() {
